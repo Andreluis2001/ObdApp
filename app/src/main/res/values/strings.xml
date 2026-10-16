@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Drive Data</string>
+
+    <string name="connection_title">Adapter connection</string>
+    <string name="connection_host_label">Adapter IP address</string>
+    <string name="connection_port_label">Port</string>
+    <string name="connection_connect">Connect</string>
+    <string name="connection_disconnect">Disconnect</string>
+    <string name="connection_status_label">Status</string>
+    <string name="connection_protocol">Protocol: %1$s</string>
+
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_connecting">Connecting to adapter\u2026</string>
+    <string name="status_initializing">Initializing adapter\u2026</string>
+    <string name="status_connected_verified">Connected. ECU communication confirmed.</string>
+    <string name="status_connected_no_ecu">Adapter connected, but the ECU is not responding. Check the ignition and that the adapter supports this vehicle.</string>
+
+    <string name="failure_invalid_configuration">Enter a valid adapter IP address and port.</string>
+    <string name="failure_transport">Could not reach the adapter. Make sure the phone is on the adapter\u2019s Wi-Fi network.</string>
+    <string name="failure_adapter_initialization">The adapter did not accept the initialization commands. It may not be an ELM327-compatible device.</string>
+    <string name="failure_unknown">An unexpected error occurred while connecting.</string>
+</resources>
