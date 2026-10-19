@@ -11,24 +11,12 @@ import com.github.eltonvs.obd.command.fuel.FuelLevelCommand
 import com.github.eltonvs.obd.command.pressure.IntakeManifoldPressureCommand
 import com.github.eltonvs.obd.command.temperature.EngineCoolantTemperatureCommand
 
-/**
- * A collectable parameter and the library command used to read it.
- *
- * [unit] is the display unit reported by the corresponding library command; only used for
- * parameters that are available, since unavailable readings show no value.
- */
 data class MetricDefinition(
     val id: MetricId,
     val unit: String,
     val commandFactory: () -> ObdCommand,
 )
 
-/**
- * Common Mode 01 parameters, polled sequentially in this order.
- *
- * Only commands that actually exist in the pinned library version (`kotlin-obd-api:1.4.1`) are
- * listed here.
- */
 val defaultMetricCatalog: List<MetricDefinition> =
     listOf(
         MetricDefinition(MetricId.RPM, "RPM") { RPMCommand() },

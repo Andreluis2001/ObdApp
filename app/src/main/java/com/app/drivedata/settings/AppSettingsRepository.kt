@@ -14,12 +14,10 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "drivedata_settings")
 
-/** Persists user-provided settings, currently the Wi-Fi adapter target. */
 class AppSettingsRepository(context: Context) {
 
     private val dataStore = context.applicationContext.dataStore
-
-    /** Last saved Wi-Fi target, falling back to the common ELM327 Wi-Fi defaults. */
+ 
     val wifiConfig: Flow<ObdWifiConfig> =
         dataStore.data.map { preferences ->
             ObdWifiConfig(

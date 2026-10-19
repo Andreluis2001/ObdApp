@@ -27,7 +27,7 @@ import com.app.drivedata.metrics.model.MetricsSnapshot
 import com.app.drivedata.metrics.model.ReadingValue
 import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
-import java.util.Locale
+import com.app.drivedata.ui.common.formatMetricValue
 
 @Composable
 fun MetricsScreen(
@@ -76,8 +76,22 @@ private fun MetricsContent(
         }
 
         val snapshot = state.snapshot
+        if (snapshot == null && state.isCollecting) {
+            Text(text = stringResource(R.string.metrics_reading))
+        }
+
+        state.error?.let { error ->
+            Text(
+                text = stringResource(error.messageRes()),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
         if (snapshot == null) {
-            Text(text = stringResource(R.string.metrics_idle))
+            if (!state.isCollecting) {
+                Text(text = stringResource(R.string.metrics_idle))
+            }
         } else {
             SnapshotCard(snapshot = snapshot)
         }
@@ -125,16 +139,8 @@ private fun ReadingRow(reading: MetricReading) {
 @Composable
 private fun MetricReading.displayText(): String =
     when (val current = value) {
-        is ReadingValue.Available -> "${formatValue(current.value)} $unit"
+        is ReadingValue.Available -> "${formatMetricValue(current.value)} $unit"
         ReadingValue.Unavailable -> stringResource(R.string.metrics_unavailable)
-    }
-
-/** Renders whole numbers without a decimal part (e.g. RPM, speed) and keeps one decimal otherwise. */
-private fun formatValue(value: Double): String =
-    if (value % 1.0 == 0.0) {
-        value.toLong().toString()
-    } else {
-        String.format(Locale.US, "%.1f", value)
     }
 
 private fun MetricId.labelRes(): Int =
@@ -147,4 +153,10 @@ private fun MetricId.labelRes(): Int =
         MetricId.INTAKE_MANIFOLD_PRESSURE -> R.string.metric_intake_manifold_pressure
         MetricId.MAF -> R.string.metric_maf
         MetricId.FUEL_LEVEL -> R.string.metric_fuel_level
+    }
+
+private fun MetricsError.messageRes(): Int =
+    when (this) {
+        MetricsError.STORAGE -> R.string.metrics_error_storage
+        MetricsError.UNEXPECTED -> R.string.metrics_error_unexpected
     }

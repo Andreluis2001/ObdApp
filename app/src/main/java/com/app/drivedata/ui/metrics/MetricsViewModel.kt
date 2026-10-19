@@ -6,48 +6,49 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.app.drivedata.DriveDataApplication
-import com.app.drivedata.metrics.ObdMetricsCollector
+import com.app.drivedata.metrics.MetricsCollectionController
+import com.app.drivedata.metrics.MetricsCollectionError
 import com.app.drivedata.metrics.model.MetricsSnapshot
 import com.app.drivedata.obd.ObdConnectionManager
-import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
+
+/** Error surfaced next to the live readings; the connection screen reports link failures. */
+enum class MetricsError {
+    /** Readings could not be written to local storage; live values are still displayed. */
+    STORAGE,
+
+    /** Collection stopped because of an unexpected failure. */
+    UNEXPECTED,
+}
 
 /** State rendered by the live-readings screen. */
 data class MetricsUiState(
     val connection: ObdConnectionState = ObdConnectionState.Disconnected,
     val isCollecting: Boolean = false,
     val snapshot: MetricsSnapshot? = null,
+    val error: MetricsError? = null,
 )
 
 /**
- * Coordinates one sequential collection loop for the metrics screen.
- *
- * The loop lives in [viewModelScope] and stops on its own when the connection leaves
- * [ObdConnectionState.Connected], so there is never more than one active collector.
+ * Reads the shared [MetricsCollectionController], which owns the collection loop for the whole
+ * app, and exposes it to the readings screen.
  */
 class MetricsViewModel(
-    private val collector: ObdMetricsCollector,
     private val connectionManager: ObdConnectionManager,
+    private val controller: MetricsCollectionController,
 ) : ViewModel() {
 
-    private val isCollecting = MutableStateFlow(false)
-    private val snapshot = MutableStateFlow<MetricsSnapshot?>(null)
-    private var collectionJob: Job? = null
-
     val uiState: StateFlow<MetricsUiState> =
-        combine(connectionManager.state, isCollecting, snapshot) { connection, collecting, current ->
+        combine(connectionManager.state, controller.state) { connection, collection ->
             MetricsUiState(
                 connection = connection,
-                isCollecting = collecting,
-                snapshot = current,
+                isCollecting = collection.isCollecting,
+                snapshot = collection.snapshot,
+                error = collection.error?.toUiError(),
             )
         }.stateIn(
             scope = viewModelScope,
@@ -55,28 +56,12 @@ class MetricsViewModel(
             initialValue = MetricsUiState(),
         )
 
-    /** Starts collecting when the ECU is verified; a no-op while already collecting or disconnected. */
     fun startCollection() {
-        if (collectionJob?.isActive == true) return
-        val connection = connectionManager.state.value
-        if (connection !is ObdConnectionState.Connected || connection.ecuStatus != EcuStatus.VERIFIED) return
-
-        isCollecting.value = true
-        collectionJob =
-            viewModelScope.launch {
-                collector.stream().collect { snapshot.value = it }
-                isCollecting.value = false
-            }
+        controller.startCollection()
     }
 
     fun stopCollection() {
-        collectionJob?.cancel()
-        collectionJob = null
-        isCollecting.value = false
-    }
-
-    override fun onCleared() {
-        stopCollection()
+        controller.stopCollection()
     }
 
     companion object {
@@ -86,10 +71,16 @@ class MetricsViewModel(
             viewModelFactory {
                 initializer {
                     MetricsViewModel(
-                        collector = application.container.metricsCollector,
                         connectionManager = application.container.obdConnectionManager,
+                        controller = application.container.metricsCollectionController,
                     )
                 }
             }
     }
 }
+
+private fun MetricsCollectionError.toUiError(): MetricsError =
+    when (this) {
+        MetricsCollectionError.STORAGE -> MetricsError.STORAGE
+        MetricsCollectionError.UNEXPECTED -> MetricsError.UNEXPECTED
+    }

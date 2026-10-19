@@ -4,6 +4,8 @@ import com.app.drivedata.metrics.model.MetricId
 import com.app.drivedata.metrics.model.MetricsSnapshot
 import com.app.drivedata.metrics.model.ReadingValue
 import com.app.drivedata.obd.ObdConnectionManager
+import com.app.drivedata.obd.model.ConnectionFailure
+import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.obd.model.ObdWifiConfig
 import com.app.drivedata.obd.transport.ObdStreams
 import com.app.drivedata.obd.transport.ObdTransport
@@ -16,6 +18,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.io.InputStream
 
 /**
  * Drives [ObdMetricsCollector] against an in-memory transport that replays the exact byte sequence
@@ -109,6 +113,22 @@ class ObdMetricsCollectorTest {
             assertTrue("expected no emissions, got $snapshots", snapshots.isEmpty())
         }
 
+    @Test
+    fun stream_failsAndReportsTransportFailure_whenLinkBreaks() =
+        runBlocking {
+            val transport = FakeObdTransport(connectScript(), failWhenExhausted = true)
+            val manager = ObdConnectionManager(transportFactory = { transport })
+            manager.connect(CONFIG)
+            assertTrue("setup failed: ${manager.state.value}", manager.state.value is ObdConnectionState.Connected)
+
+            val failure = runCatching { manager.toCollector().stream().first() }.exceptionOrNull()
+
+            assertTrue("expected IOException but was $failure", failure is IOException)
+            val state = manager.state.value
+            assertTrue("expected Failed but was $state", state is ObdConnectionState.Failed)
+            assertEquals(ConnectionFailure.TRANSPORT, (state as ObdConnectionState.Failed).reason)
+        }
+
     private fun ObdConnectionManager.toCollector() = ObdMetricsCollector(this)
 
     private fun assertAvailable(
@@ -162,8 +182,14 @@ private fun elmScript(vararg responses: String): String =
 private class FakeObdTransport(
     script: String,
     private val onOpen: () -> Unit = {},
+    failWhenExhausted: Boolean = false,
 ) : ObdTransport {
-    private val input = ByteArrayInputStream(script.toByteArray(Charsets.US_ASCII))
+    private val input =
+        if (failWhenExhausted) {
+            ClosedSocketInputStream(script.toByteArray(Charsets.US_ASCII))
+        } else {
+            ByteArrayInputStream(script.toByteArray(Charsets.US_ASCII))
+        }
     private val output = ByteArrayOutputStream()
 
     override fun open(): ObdStreams {
@@ -173,5 +199,28 @@ private class FakeObdTransport(
 
     override fun close() {
         // Nothing to release for the in-memory fake.
+    }
+}
+
+/**
+ * Replays a script and then fails like a socket whose peer disappeared: once the script is
+ * drained, every read attempt throws.
+ */
+private class ClosedSocketInputStream(
+    private val bytes: ByteArray,
+) : InputStream() {
+    private var position = 0
+
+    private val drained: Boolean
+        get() = position >= bytes.size
+
+    override fun available(): Int {
+        if (drained) throw IOException("simulated link loss")
+        return bytes.size - position
+    }
+
+    override fun read(): Int {
+        if (drained) throw IOException("simulated link loss")
+        return bytes[position++].toInt() and 0xFF
     }
 }

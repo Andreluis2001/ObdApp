@@ -3,12 +3,6 @@ package com.app.drivedata.obd.transport
 import java.net.InetSocketAddress
 import java.net.Socket
 
-/**
- * [ObdTransport] backed by a TCP socket, used by ELM327 Wi-Fi bridges.
- *
- * Most Wi-Fi adapters expose a socket server on a fixed address (commonly
- * `192.168.0.10:35000`) and bridge every byte straight to the serial bus.
- */
 class WifiObdTransport(
     private val host: String,
     private val port: Int,

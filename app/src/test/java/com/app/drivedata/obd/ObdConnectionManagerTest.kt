@@ -6,8 +6,10 @@ import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.obd.model.ObdWifiConfig
 import com.app.drivedata.obd.transport.ObdStreams
 import com.app.drivedata.obd.transport.ObdTransport
+import com.github.eltonvs.obd.command.engine.RPMCommand
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -78,6 +80,27 @@ class ObdConnectionManagerTest {
             val state = manager.state.value
             assertTrue("expected Failed but was $state", state is ObdConnectionState.Failed)
             assertEquals(ConnectionFailure.INVALID_CONFIGURATION, (state as ObdConnectionState.Failed).reason)
+        }
+
+    @Test
+    fun disconnect_closesTheLinkAndRejectsCommands() =
+        runBlocking {
+            val transport =
+                FakeObdTransport(
+                    elmScript(
+                        "OK", "OK", "OK", "OK", "OK", "OK", "OK",
+                        "ISO 15765-4 (CAN 11/500)",
+                        "41 00 BE 3E B8 13",
+                        "41 0C 1A F8",
+                    ),
+                )
+            val manager = ObdConnectionManager(transportFactory = { transport })
+            manager.connect(ObdWifiConfig(host = "192.168.0.10", port = 35000))
+
+            manager.disconnect()
+
+            assertTrue(manager.state.value is ObdConnectionState.Disconnected)
+            assertNull(manager.runCommand(RPMCommand()))
         }
 }
 

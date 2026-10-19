@@ -2,6 +2,17 @@
 <resources>
     <string name="app_name">Drive Data</string>
 
+    <string name="login_title">Telemetria Veicular</string>
+    <string name="login_subtitle">Dados do seu veículo, mais controle para sua jornada.</string>
+    <string name="login_username_label">E-mail ou usuário</string>
+    <string name="login_password_label">Senha</string>
+    <string name="login_submit">Entrar</string>
+    <string name="login_show_password">Mostrar senha</string>
+    <string name="login_hide_password">Ocultar senha</string>
+    <string name="login_error_invalid_credentials">Usuário ou senha incorretos.</string>
+    <string name="login_error_unexpected">Não foi possível entrar. Tente novamente.</string>
+    <string name="action_sign_out">Sign out</string>
+
     <string name="connection_title">Adapter connection</string>
     <string name="connection_host_label">Adapter IP address</string>
     <string name="connection_port_label">Port</string>
@@ -21,15 +32,54 @@
     <string name="failure_adapter_initialization">The adapter did not accept the initialization commands. It may not be an ELM327-compatible device.</string>
     <string name="failure_unknown">An unexpected error occurred while connecting.</string>
 
-    <string name="tab_connection">Connection</string>
-    <string name="tab_metrics">Readings</string>
+    <string name="tab_home">Início</string>
+    <string name="tab_connection">Conexão</string>
+    <string name="tab_metrics">Leituras</string>
+
+    <string name="home_default_vehicle">Chevrolet S10</string>
+    <string name="home_connected">Veículo conectado</string>
+    <string name="home_disconnected">Veículo desconectado</string>
+    <string name="home_collecting">Coleta ativa</string>
+    <string name="home_sending">Enviando dados</string>
+    <string name="home_idle">Coleta parada</string>
+    <string name="home_waiting">Aguardando conexão</string>
+    <string name="home_main_parameters">Principais parâmetros (OBD-II)</string>
+    <string name="home_see_all_parameters">Ver todos os parâmetros</string>
+    <string name="home_connection_status">Status da conexão</string>
+    <string name="home_obd_connection">Conexão OBD</string>
+    <string name="home_last_sync">Última sincronização</string>
+    <string name="home_pending_data">Dados pendentes</string>
+    <string name="home_sync_today">Hoje, %1$s</string>
+    <string name="home_sync_never">Nunca</string>
+    <string name="home_pending_value">%1$d registros (~%2$s)</string>
+    <string name="home_adapter">ELM327</string>
+    <string name="home_internet">Internet</string>
+    <string name="home_storage">Armazenamento local</string>
+    <string name="home_connected_value">Conectado</string>
+    <string name="home_disconnected_value">Desconectado</string>
+    <string name="home_available">Disponível</string>
+    <string name="home_unavailable">Indisponível</string>
+    <string name="home_storage_value">%1$s / %2$s</string>
+    <string name="home_transport_wifi">Wi-Fi</string>
+    <string name="home_metric_rpm">RPM</string>
+    <string name="home_metric_speed">Velocidade</string>
+    <string name="home_metric_coolant">Temperatura do motor</string>
+    <string name="home_metric_load">Carga do motor</string>
+    <string name="home_unit_rpm">rpm</string>
+    <string name="home_unit_speed">km/h</string>
+    <string name="home_unit_temperature">°C</string>
+    <string name="home_unit_percent">%</string>
+    <string name="home_value_unavailable">--</string>
 
     <string name="metrics_title">Live readings</string>
     <string name="metrics_start">Start collection</string>
     <string name="metrics_stop">Stop</string>
     <string name="metrics_idle">Start collection to read live values from the vehicle.</string>
+    <string name="metrics_reading">Reading from the vehicle\u2026</string>
     <string name="metrics_vin">VIN: %1$s</string>
     <string name="metrics_unavailable">Unavailable</string>
+    <string name="metrics_error_storage">Readings could not be saved on this device. Live values are still shown, but they are not queued for upload.</string>
+    <string name="metrics_error_unexpected">Collection stopped because of an unexpected error.</string>
 
     <string name="metric_rpm">Engine RPM</string>
     <string name="metric_speed">Vehicle speed</string>

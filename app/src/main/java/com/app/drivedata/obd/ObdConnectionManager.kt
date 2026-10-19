@@ -1,7 +1,6 @@
 package com.app.drivedata.obd
 
 import com.app.drivedata.obd.model.ConnectionFailure
-import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.obd.model.ObdWifiConfig
 import com.app.drivedata.obd.transport.ObdTransport
@@ -18,26 +17,22 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Owns the active adapter link and exposes its state.
- *
- * One instance is shared for the whole app (see `AppContainer`). Only one physical connection
- * is ever open at a time: [connect] tears down any previous link before opening a new one, and
- * the underlying [ObdDeviceConnection] serializes command execution internally.
- */
 class ObdConnectionManager(
     private val transportFactory: (ObdWifiConfig) -> ObdTransport = { WifiObdTransport(it.host, it.port) },
 ) {
     private val lifecycleLock = Mutex()
 
+    private val intentionallyClosing = AtomicBoolean(false)
+
     private val _state = MutableStateFlow<ObdConnectionState>(ObdConnectionState.Disconnected)
     val state: StateFlow<ObdConnectionState> = _state.asStateFlow()
 
+    @Volatile
     private var transport: ObdTransport? = null
     private var connection: ObdDeviceConnection? = null
 
-    /** Opens (or re-opens) the adapter link, initializes the ELM327, and verifies ECU comms. */
     suspend fun connect(config: ObdWifiConfig) =
         lifecycleLock.withLock {
             closeInternal()
@@ -76,21 +71,43 @@ class ObdConnectionManager(
             }
         }
 
-    /** Closes the link and returns to [ObdConnectionState.Disconnected]. */
-    suspend fun disconnect() =
+    suspend fun disconnect() {
+        intentionallyClosing.set(true)
+        transport?.close()
+        try {
+            lifecycleLock.withLock {
+                closeInternal()
+                _state.value = ObdConnectionState.Disconnected
+            }
+        } finally {
+            intentionallyClosing.set(false)
+        }
+    }
+
+    suspend fun runCommand(command: ObdCommand): ObdResponse? =
         lifecycleLock.withLock {
-            closeInternal()
-            _state.value = ObdConnectionState.Disconnected
+            val active = connection ?: return@withLock null
+            try {
+                active.run(command)
+            } catch (e: IOException) {
+                if (!intentionallyClosing.get()) {
+                    markTransportFailure()
+                }
+                throw e
+            }
         }
 
-    /**
-     * Runs a single command against the active connection.
-     *
-     * Returns null when there is no open connection. Held under the lifecycle lock so the link
-     * cannot be closed while a command is in flight.
-     */
-    suspend fun runCommand(command: ObdCommand): ObdResponse? =
-        lifecycleLock.withLock { connection?.run(command) }
+    private fun markTransportFailure() {
+        val config =
+            when (val current = _state.value) {
+                is ObdConnectionState.Connected -> current.config
+                is ObdConnectionState.Initializing -> current.config
+                is ObdConnectionState.Connecting -> current.config
+                else -> null
+            }
+        closeInternal()
+        _state.value = ObdConnectionState.Failed(config, ConnectionFailure.TRANSPORT)
+    }
 
     private fun closeInternal() {
         connection = null
