@@ -1,6 +1,7 @@
 package com.app.drivedata.di
 
 import android.content.Context
+import com.app.drivedata.metrics.ObdMetricsCollector
 import com.app.drivedata.obd.ObdConnectionManager
 import com.app.drivedata.settings.AppSettingsRepository
 
@@ -13,4 +14,5 @@ import com.app.drivedata.settings.AppSettingsRepository
 class AppContainer(context: Context) {
     val settingsRepository = AppSettingsRepository(context)
     val obdConnectionManager = ObdConnectionManager()
+    val metricsCollector = ObdMetricsCollector(obdConnectionManager)
 }

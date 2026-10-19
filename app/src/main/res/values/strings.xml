@@ -20,4 +20,23 @@
     <string name="failure_transport">Could not reach the adapter. Make sure the phone is on the adapter\u2019s Wi-Fi network.</string>
     <string name="failure_adapter_initialization">The adapter did not accept the initialization commands. It may not be an ELM327-compatible device.</string>
     <string name="failure_unknown">An unexpected error occurred while connecting.</string>
+
+    <string name="tab_connection">Connection</string>
+    <string name="tab_metrics">Readings</string>
+
+    <string name="metrics_title">Live readings</string>
+    <string name="metrics_start">Start collection</string>
+    <string name="metrics_stop">Stop</string>
+    <string name="metrics_idle">Start collection to read live values from the vehicle.</string>
+    <string name="metrics_vin">VIN: %1$s</string>
+    <string name="metrics_unavailable">Unavailable</string>
+
+    <string name="metric_rpm">Engine RPM</string>
+    <string name="metric_speed">Vehicle speed</string>
+    <string name="metric_coolant_temperature">Coolant temperature</string>
+    <string name="metric_engine_load">Engine load</string>
+    <string name="metric_throttle_position">Throttle position</string>
+    <string name="metric_intake_manifold_pressure">Intake manifold pressure</string>
+    <string name="metric_maf">Mass air flow</string>
+    <string name="metric_fuel_level">Fuel level</string>
 </resources>
