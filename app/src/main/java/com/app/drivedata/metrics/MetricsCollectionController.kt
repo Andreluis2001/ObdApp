@@ -25,13 +25,6 @@ data class MetricsCollectionState(
     val error: MetricsCollectionError? = null,
 )
 
-/**
- * Owns the single live-collection loop for the whole app.
- *
- * Collection starts automatically once the ECU is verified and stops when the link is lost.
- * A manual stop is remembered until the next successful connection, so the dashboard does not
- * immediately restart a loop the user just stopped.
- */
 class MetricsCollectionController(
     private val scope: CoroutineScope,
     private val connectionState: StateFlow<ObdConnectionState>,
@@ -43,11 +36,7 @@ class MetricsCollectionController(
     val state: StateFlow<MetricsCollectionState> = _state.asStateFlow()
 
     private var collectionJob: Job? = null
-
-    /**
-     * Identifies the current collection run. A cancelled run that is still unwinding a blocking
-     * socket read must not clear the state of a newer run.
-     */
+    
     private var collectionSession = 0
 
     private var stoppedByUser = false
@@ -65,7 +54,6 @@ class MetricsCollectionController(
         }
     }
 
-    /** Starts collecting when the ECU is verified; a no-op while already collecting. */
     fun startCollection() {
         if (collectionJob?.isActive == true) return
         if (!connectionState.value.isCollectible()) return
@@ -82,8 +70,6 @@ class MetricsCollectionController(
                     }
                 } catch (e: CancellationException) {
                     throw e
-                } catch (_: IOException) {
-                    // ObdConnectionManager already closed the link and reported Failed(TRANSPORT).
                 } catch (_: Exception) {
                     _state.value = _state.value.copy(error = MetricsCollectionError.UNEXPECTED)
                 } finally {
@@ -94,7 +80,6 @@ class MetricsCollectionController(
             }
     }
 
-    /** Stops the loop on explicit user request, until the next connection. */
     fun stopCollection() {
         stoppedByUser = true
         stopInternal()
@@ -107,10 +92,6 @@ class MetricsCollectionController(
         _state.value = _state.value.copy(isCollecting = false)
     }
 
-    /**
-     * Stores one snapshot. A storage failure is surfaced but does not stop live collection: the
-     * user still gets readings, and a later successful write clears the warning.
-     */
     private suspend fun persist(snapshot: MetricsSnapshot) {
         try {
             repository.save(snapshot)

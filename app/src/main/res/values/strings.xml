@@ -12,25 +12,59 @@
     <string name="login_error_invalid_credentials">Usuário ou senha incorretos.</string>
     <string name="login_error_unexpected">Não foi possível entrar. Tente novamente.</string>
     <string name="action_sign_out">Sign out</string>
+    <string name="action_back">Voltar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_close">Fechar</string>
 
-    <string name="connection_title">Adapter connection</string>
-    <string name="connection_host_label">Adapter IP address</string>
-    <string name="connection_port_label">Port</string>
-    <string name="connection_connect">Connect</string>
-    <string name="connection_disconnect">Disconnect</string>
-    <string name="connection_status_label">Status</string>
-    <string name="connection_protocol">Protocol: %1$s</string>
+    <string name="connection_title">Conexão</string>
+    <string name="connection_header_subtitle">ELM327 + Veículo</string>
+    <string name="connection_host_label">Endereço IP do adaptador</string>
+    <string name="connection_port_label">Porta</string>
+    <string name="connection_connect">Conectar</string>
+    <string name="connection_disconnect">Desconectar</string>
+    <string name="connection_action_cancel">Cancelar</string>
+    <string name="connection_action_retry">Tentar novamente</string>
+    <string name="connection_settings">Configurações</string>
 
-    <string name="status_disconnected">Disconnected</string>
-    <string name="status_connecting">Connecting to adapter\u2026</string>
-    <string name="status_initializing">Initializing adapter\u2026</string>
-    <string name="status_connected_verified">Connected. ECU communication confirmed.</string>
-    <string name="status_connected_no_ecu">Adapter connected, but the ECU is not responding. Check the ignition and that the adapter supports this vehicle.</string>
+    <string name="connection_adapter_name">ELM327 (Wi-Fi)</string>
+    <string name="connection_address">IP: %1$s:%2$s</string>
+    <string name="connection_address_unknown">IP não configurado</string>
+    <string name="connection_address_label">Endereço</string>
 
-    <string name="failure_invalid_configuration">Enter a valid adapter IP address and port.</string>
-    <string name="failure_transport">Could not reach the adapter. Make sure the phone is on the adapter\u2019s Wi-Fi network.</string>
-    <string name="failure_adapter_initialization">The adapter did not accept the initialization commands. It may not be an ELM327-compatible device.</string>
-    <string name="failure_unknown">An unexpected error occurred while connecting.</string>
+    <string name="connection_status_connected">Conectado</string>
+    <string name="connection_status_disconnected">Desconectado</string>
+    <string name="connection_status_connecting">Conectando\u2026</string>
+    <string name="connection_status_initializing">Inicializando\u2026</string>
+    <string name="connection_status_verifying">Verificando\u2026</string>
+    <string name="connection_status_no_ecu">ECU sem resposta</string>
+    <string name="connection_status_failed">Falha na conexão</string>
+
+    <string name="connection_pair_new">Parear novo dispositivo</string>
+    <string name="connection_pair_new_subtitle">Conectar outro ELM327</string>
+    <string name="connection_pair_dialog_title">Parear novo dispositivo</string>
+    <string name="connection_pair_dialog_hint">Informe o endereço do adaptador na rede Wi-Fi.</string>
+
+    <string name="connection_test">Testar comunicação</string>
+    <string name="connection_test_subtitle">Verificar se o veículo responde</string>
+
+    <string name="connection_pids">PIDs suportados</string>
+    <string name="connection_pids_subtitle">Ver quais parâmetros estão disponíveis</string>
+    <string name="connection_pids_dialog_title">PIDs suportados</string>
+    <string name="connection_pids_dialog_hint">O app consulta estes parâmetros. A disponibilidade varia conforme o modelo e ano do veículo.</string>
+
+    <string name="connection_protocol">Protocolo</string>
+    <string name="connection_protocol_auto">Automático</string>
+    <string name="connection_protocol_unknown">Desconhecido</string>
+    <string name="connection_protocol_dialog_title">Protocolo</string>
+    <string name="connection_protocol_dialog_current">Protocolo atual</string>
+    <string name="connection_protocol_dialog_hint">O protocolo é negociado automaticamente pelo adaptador ao conectar.</string>
+
+    <string name="connection_info">O ELM327 não garante o suporte de todos os parâmetros. A disponibilidade depende do modelo e ano do veículo.</string>
+
+    <string name="failure_invalid_configuration">Informe um endereço IP e uma porta válidos.</string>
+    <string name="failure_transport">Não foi possível alcançar o adaptador. Verifique se o celular está na rede Wi-Fi do adaptador.</string>
+    <string name="failure_adapter_initialization">O adaptador não aceitou os comandos de inicialização. Ele pode não ser um dispositivo compatível com ELM327.</string>
+    <string name="failure_unknown">Ocorreu um erro inesperado ao conectar.</string>
 
     <string name="tab_home">Início</string>
     <string name="tab_connection">Conexão</string>
@@ -71,22 +105,46 @@
     <string name="home_unit_percent">%</string>
     <string name="home_value_unavailable">--</string>
 
-    <string name="metrics_title">Live readings</string>
-    <string name="metrics_start">Start collection</string>
-    <string name="metrics_stop">Stop</string>
-    <string name="metrics_idle">Start collection to read live values from the vehicle.</string>
-    <string name="metrics_reading">Reading from the vehicle\u2026</string>
-    <string name="metrics_vin">VIN: %1$s</string>
-    <string name="metrics_unavailable">Unavailable</string>
-    <string name="metrics_error_storage">Readings could not be saved on this device. Live values are still shown, but they are not queued for upload.</string>
-    <string name="metrics_error_unexpected">Collection stopped because of an unexpected error.</string>
+    <string name="metrics_title">Parâmetros do Veículo</string>
+    <string name="metrics_tab_realtime">Tempo real</string>
+    <string name="metrics_tab_diagnostics">Diagnóstico</string>
+    <string name="metrics_pause_collection">Parar coleta</string>
+    <string name="metrics_resume_collection">Iniciar coleta</string>
+    <string name="metrics_min_max">min %1$s \u2022 máx %2$s</string>
+    <string name="metrics_offline_hint">Conecte o ELM327 para receber os parâmetros do veículo.</string>
+    <string name="metrics_disclaimer">Nem todos os veículos suportam todos os parâmetros. Os dados podem variar conforme o modelo e ano do veículo.</string>
+    <string name="metrics_unavailable">Indisponível</string>
+    <string name="metrics_error_storage">Não foi possível salvar as leituras neste dispositivo. Os valores ao vivo continuam sendo exibidos, mas não serão enviados.</string>
+    <string name="metrics_error_unexpected">A coleta foi interrompida por um erro inesperado.</string>
+    <string name="metrics_unit_pressure">kPa</string>
+    <string name="metrics_unit_airflow">g/s</string>
 
-    <string name="metric_rpm">Engine RPM</string>
-    <string name="metric_speed">Vehicle speed</string>
-    <string name="metric_coolant_temperature">Coolant temperature</string>
-    <string name="metric_engine_load">Engine load</string>
-    <string name="metric_throttle_position">Throttle position</string>
-    <string name="metric_intake_manifold_pressure">Intake manifold pressure</string>
-    <string name="metric_maf">Mass air flow</string>
-    <string name="metric_fuel_level">Fuel level</string>
+    <string name="metrics_diag_connection">Conexão</string>
+    <string name="metrics_diag_status">Status</string>
+    <string name="metrics_diag_information">Informações</string>
+    <string name="metrics_diag_protocol">Protocolo</string>
+    <string name="metrics_diag_adapter">Adaptador</string>
+    <string name="metrics_diag_adapter_value">ELM327 (Wi-Fi)</string>
+    <string name="metrics_diag_vehicle">Veículo</string>
+    <string name="metrics_diag_vin">Chassi (VIN)</string>
+    <string name="metrics_diag_last_reading">Última leitura</string>
+    <string name="metrics_diag_parameters">Parâmetros recebidos</string>
+    <string name="metrics_diag_parameters_value">%1$d de %2$d</string>
+    <string name="metrics_diag_never">Nenhuma leitura</string>
+    <string name="metrics_status_connecting">Conectando\u2026</string>
+    <string name="metrics_status_initializing">Inicializando\u2026</string>
+    <string name="metrics_status_verified">Conectado</string>
+    <string name="metrics_status_ecu_no_response">ECU sem resposta</string>
+    <string name="metrics_status_verifying">Verificando\u2026</string>
+    <string name="metrics_status_failed">Falha na conexão</string>
+    <string name="metrics_status_disconnected">Desconectado</string>
+
+    <string name="metric_rpm">RPM do motor</string>
+    <string name="metric_speed">Velocidade</string>
+    <string name="metric_coolant_temperature">Temperatura do motor</string>
+    <string name="metric_engine_load">Carga do motor</string>
+    <string name="metric_throttle_position">Posição da borboleta</string>
+    <string name="metric_intake_manifold_pressure">Pressão do coletor (MAP)</string>
+    <string name="metric_maf">Fluxo de ar (MAF)</string>
+    <string name="metric_fuel_level">Nível de combustível</string>
 </resources>

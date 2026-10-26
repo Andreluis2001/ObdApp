@@ -23,7 +23,13 @@ data class ConnectionUiState(
     val port: String = "",
     val connection: ObdConnectionState = ObdConnectionState.Disconnected,
     val isBusy: Boolean = false,
-)
+) {
+    val isConfigValid: Boolean
+        get() {
+            val portNumber = port.toIntOrNull() ?: return false
+            return host.isNotBlank() && portNumber in 1..65535
+        }
+}
 
 class ConnectionViewModel(
     private val settingsRepository: AppSettingsRepository,
@@ -77,6 +83,9 @@ class ConnectionViewModel(
     fun disconnect() {
         viewModelScope.launch { obdConnectionManager.disconnect() }
     }
+
+    /** Re-runs adapter initialization and the ECU check using the saved configuration. */
+    fun testCommunication() = connect()
 
     companion object {
         private const val STOP_TIMEOUT_MS = 5_000L

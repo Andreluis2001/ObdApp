@@ -3,7 +3,6 @@ package com.app.drivedata.auth
 import java.security.MessageDigest
 import java.security.SecureRandom
 
-/** Salts and hashes passwords so the database never stores them in clear text. */
 object PasswordHasher {
 
     private const val DIGEST_ALGORITHM = "SHA-256"

@@ -1,0 +1,36 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+
+    <!-- Adapter body -->
+    <path
+        android:fillColor="#15161A"
+        android:pathData="M15,12 C15,8 18,5 22,5 H42 C46,5 49,8 49,12 V36 C49,40 46,43 42,43 H22 C18,43 15,40 15,36 Z" />
+
+    <!-- Top highlight -->
+    <path
+        android:fillColor="#2A2C33"
+        android:pathData="M22,5 H42 C46,5 49,8 49,12 V16 H15 V12 C15,8 18,5 22,5 Z" />
+
+    <!-- Front label -->
+    <path
+        android:fillColor="#3B3E47"
+        android:pathData="M21,19 H43 C44.1,19 45,19.9 45,21 V26 C45,27.1 44.1,28 43,28 H21 C19.9,28 19,27.1 19,26 V21 C19,19.9 19.9,19 21,19 Z" />
+
+    <!-- Status LED -->
+    <path
+        android:fillColor="#1F7BFF"
+        android:pathData="M21,32 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" />
+
+    <!-- OBD-II connector housing -->
+    <path
+        android:fillColor="#15161A"
+        android:pathData="M19,43 H45 V51 C45,53.8 42.8,56 40,56 H24 C21.2,56 19,53.8 19,51 Z" />
+
+    <!-- Connector pins -->
+    <path
+        android:fillColor="#0C0D10"
+        android:pathData="M22,46 H25 V52 H22 Z M28,46 H31 V52 H28 Z M34,46 H37 V52 H34 Z M40,46 H43 V52 H40 Z" />
+</vector>

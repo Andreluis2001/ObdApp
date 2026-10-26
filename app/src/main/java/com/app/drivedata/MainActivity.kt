@@ -78,14 +78,18 @@ private fun DriveDataApp() {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
-                actions = {
-                    TextButton(onClick = authSession::signOut) {
-                        Text(stringResource(R.string.action_sign_out))
-                    }
-                },
-            )
+            // The parameters and connection screens draw their own dark headers, including the
+            // status bar area.
+            if (destination == AppDestination.HOME) {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.app_name)) },
+                    actions = {
+                        TextButton(onClick = authSession::signOut) {
+                            Text(stringResource(R.string.action_sign_out))
+                        }
+                    },
+                )
+            }
         },
         bottomBar = {
             NavigationBar {
@@ -120,10 +124,20 @@ private fun DriveDataApp() {
                 )
 
             AppDestination.CONNECTION ->
-                ConnectionScreen(viewModel = connectionViewModel, modifier = contentModifier)
+                ConnectionScreen(
+                    viewModel = connectionViewModel,
+                    onBack = { destination = AppDestination.HOME },
+                    // The screen header draws under the status bar on its own.
+                    modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
+                )
 
             AppDestination.METRICS ->
-                MetricsScreen(viewModel = metricsViewModel, modifier = contentModifier)
+                MetricsScreen(
+                    viewModel = metricsViewModel,
+                    onBack = { destination = AppDestination.HOME },
+                    // The screen header draws under the status bar on its own.
+                    modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
+                )
         }
     }
 }
