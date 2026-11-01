@@ -18,10 +18,8 @@ class MetricsRepository(
         dao.insert(snapshot.toEntity(idGenerator()))
     }
 
-    /** Number of records waiting to be uploaded, kept live for the dashboard. */
     fun observePendingCount(): Flow<Int> = dao.observeCountByStatus(UploadStatus.PENDING)
 
-    /** Timestamp of the newest recorded snapshot, or null when nothing was collected yet. */
     fun observeLastCollectedAtMillis(): Flow<Long?> = dao.observeLatestCollectedAtMillis()
 
     private fun MetricsSnapshot.toEntity(id: String): MetricRecordEntity =

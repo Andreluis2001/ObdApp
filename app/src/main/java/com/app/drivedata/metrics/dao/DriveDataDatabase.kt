@@ -23,7 +23,6 @@ abstract class DriveDataDatabase : RoomDatabase() {
     companion object {
         const val DATABASE_NAME = "drivedata.db"
 
-        /** Adds the users table without dropping existing metric records. */
         private val MIGRATION_1_2 =
             object : Migration(1, 2) {
                 override fun migrate(db: SupportSQLiteDatabase) {

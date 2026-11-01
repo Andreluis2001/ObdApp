@@ -46,6 +46,51 @@ class ObdConnectionManagerTest {
         }
 
     @Test
+    fun connect_retriesOnce_whenFirstResponseContainsSearchingPreamble() =
+        runBlocking {
+            val transport =
+                FakeObdTransport(
+                    elmScript(
+                        "OK", "OK", "OK", "OK", "OK", "OK", "OK",
+                        "ISO 15765-4 (CAN 11/500)",
+                        // Real adapters prefix the first OBD response with SEARCHING...
+                        "SEARCHING...\r41 00 BE 3E B8 13",
+                        "41 00 BE 3E B8 13",
+                        "41 0C 1A F8",
+                    ),
+                )
+            val manager = ObdConnectionManager(transportFactory = { transport })
+
+            manager.connect(ObdWifiConfig(host = "192.168.0.10", port = 35000))
+
+            val state = manager.state.value
+            assertTrue("expected Connected but was $state", state is ObdConnectionState.Connected)
+            assertEquals(EcuStatus.VERIFIED, (state as ObdConnectionState.Connected).ecuStatus)
+        }
+
+    @Test
+    fun runCommand_retriesOnce_whenResponseContainsSearchingPreamble() =
+        runBlocking {
+            val transport =
+                FakeObdTransport(
+                    elmScript(
+                        "OK", "OK", "OK", "OK", "OK", "OK", "OK",
+                        "ISO 15765-4 (CAN 11/500)",
+                        "41 00 BE 3E B8 13",
+                        "41 0C 1A F8",
+                        "SEARCHING...\r41 0C 10 A4",
+                        "41 0C 10 A4",
+                    ),
+                )
+            val manager = ObdConnectionManager(transportFactory = { transport })
+            manager.connect(ObdWifiConfig(host = "192.168.0.10", port = 35000))
+
+            val response = manager.runCommand(RPMCommand())
+
+            assertEquals(1065.0, response?.value?.toDouble() ?: Double.NaN, 0.01)
+        }
+
+    @Test
     fun connect_reportsNoEcuCommunication_whenEcuAnswersNoData() =
         runBlocking {
             val transport =

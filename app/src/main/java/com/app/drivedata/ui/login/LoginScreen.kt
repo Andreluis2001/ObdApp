@@ -279,7 +279,6 @@ private fun loginFieldColors() =
         disabledTrailingIconColor = LoginTextMuted.copy(alpha = 0.4f),
     )
 
-/** Keeps the status and navigation bar icons readable over the dark gradient. */
 @Composable
 private fun UseDarkSystemBars() {
     val view = LocalView.current

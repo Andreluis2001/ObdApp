@@ -369,7 +369,6 @@ private fun MetricCard(
     }
 }
 
-/** Draws a compact line chart of the latest samples, with a soft area fill under the line. */
 @Composable
 private fun Sparkline(points: List<Double>, color: Color, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {

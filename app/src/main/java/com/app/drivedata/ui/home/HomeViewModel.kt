@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
-/** State rendered by the dashboard. */
 data class HomeUiState(
     val vehicleName: String = "",
     val connection: ObdConnectionState = ObdConnectionState.Disconnected,
@@ -31,7 +30,6 @@ data class HomeUiState(
     val storageUsedBytes: Long = 0L,
     val storageBudgetBytes: Long = 0L,
 ) {
-    /** Approximate queue size, mirroring the dashboard estimate. */
     val pendingBytes: Long
         get() = pendingCount * ESTIMATED_RECORD_BYTES
 

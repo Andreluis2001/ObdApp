@@ -64,6 +64,7 @@
     <string name="failure_invalid_configuration">Informe um endereço IP e uma porta válidos.</string>
     <string name="failure_transport">Não foi possível alcançar o adaptador. Verifique se o celular está na rede Wi-Fi do adaptador.</string>
     <string name="failure_adapter_initialization">O adaptador não aceitou os comandos de inicialização. Ele pode não ser um dispositivo compatível com ELM327.</string>
+    <string name="failure_ecu_no_response">O veículo ou o adaptador parou de responder. Verifique a ignição e a conexão Wi-Fi e tente novamente.</string>
     <string name="failure_unknown">Ocorreu um erro inesperado ao conectar.</string>
 
     <string name="tab_home">Início</string>

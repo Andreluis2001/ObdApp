@@ -23,6 +23,7 @@ enum class ConnectionFailure {
     INVALID_CONFIGURATION,
     TRANSPORT,
     ADAPTER_INITIALIZATION,
+    ECU_NO_RESPONSE,
     UNKNOWN,
 }
 

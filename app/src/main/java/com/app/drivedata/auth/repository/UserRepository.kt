@@ -8,10 +8,6 @@ class UserRepository(
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
 
-    /**
-     * Guarantees the shipped default account exists. Safe to call repeatedly and against a
-     * database migrated from an older schema, where the users table starts out empty.
-     */
     suspend fun ensureDefaultUser() {
         if (dao.count() > 0) return
 
@@ -26,7 +22,6 @@ class UserRepository(
         )
     }
 
-    /** Returns true when [username] exists and [password] matches its stored hash. */
     suspend fun authenticate(username: String, password: String): Boolean {
         ensureDefaultUser()
 

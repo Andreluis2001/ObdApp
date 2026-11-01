@@ -16,13 +16,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** Error shown by the login screen. */
 enum class LoginError {
     INVALID_CREDENTIALS,
     UNEXPECTED,
 }
 
-/** State rendered by the login screen. */
 data class LoginUiState(
     val username: String = "",
     val password: String = "",

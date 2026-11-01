@@ -23,16 +23,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Error surfaced next to the live readings; the connection screen reports link failures. */
 enum class MetricsError {
-    /** Readings could not be written to local storage; live values are still displayed. */
     STORAGE,
 
-    /** Collection stopped because of an unexpected failure. */
     UNEXPECTED,
 }
 
-/** State rendered by the vehicle parameters screen. */
 data class MetricsUiState(
     val vehicleName: String = "",
     val connection: ObdConnectionState = ObdConnectionState.Disconnected,
@@ -41,16 +37,10 @@ data class MetricsUiState(
     val history: Map<MetricId, List<Double>> = emptyMap(),
     val error: MetricsError? = null,
 ) {
-    /** True only when the adapter answered the ECU, so live values are meaningful. */
     val isEcuVerified: Boolean
         get() = (connection as? ObdConnectionState.Connected)?.ecuStatus == EcuStatus.VERIFIED
 }
 
-/**
- * Reads the shared [MetricsCollectionController], which owns the collection loop for the whole
- * app, and exposes it to the parameters screen together with a short rolling history used by the
- * sparklines.
- */
 class MetricsViewModel(
     private val vehicleName: String,
     connectionState: StateFlow<ObdConnectionState>,
@@ -65,7 +55,6 @@ class MetricsViewModel(
                 if (!collection.isCollecting) return@collect
                 val snapshot = collection.snapshot
                 if (snapshot == null) {
-                    // A new collection session: drop samples from the previous one.
                     history.value = emptyMap()
                 } else {
                     history.update { current -> current.appendedWith(snapshot) }

@@ -9,10 +9,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-/**
- * Keeps the status bar icons readable over a dark header for as long as this composable is in the
- * composition, restoring the previous appearance afterwards.
- */
 @Composable
 fun LightStatusBarIcons() {
     val view = LocalView.current

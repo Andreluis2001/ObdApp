@@ -18,10 +18,6 @@ import com.app.drivedata.ui.theme.HomeGreen
 import com.app.drivedata.ui.theme.HomeOrange
 import com.app.drivedata.ui.theme.HomePurple
 
-/**
- * Visual metadata for a live parameter. The min/max values are the usual OBD-II measuring ranges
- * shown under each value; they are not vehicle-specific limits.
- */
 internal data class MetricPresentation(
     val labelRes: Int,
     val unitRes: Int,
@@ -30,7 +26,6 @@ internal data class MetricPresentation(
     val range: ClosedFloatingPointRange<Double>,
 )
 
-/** Order matches the "Parâmetros do Veículo" mockup, with the remaining catalog entries after it. */
 internal val parameterOrder: List<MetricId> =
     listOf(
         MetricId.RPM,

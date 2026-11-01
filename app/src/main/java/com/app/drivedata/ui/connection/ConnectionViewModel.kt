@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** State rendered by the connection screen. */
 data class ConnectionUiState(
     val host: String = "",
     val port: String = "",
@@ -84,7 +83,6 @@ class ConnectionViewModel(
         viewModelScope.launch { obdConnectionManager.disconnect() }
     }
 
-    /** Re-runs adapter initialization and the ECU check using the saved configuration. */
     fun testCommunication() = connect()
 
     companion object {

@@ -10,7 +10,6 @@ private const val KILOBYTE = 1024L
 private const val MEGABYTE = KILOBYTE * 1024L
 private const val GIGABYTE = MEGABYTE * 1024L
 
-/** Renders whole numbers without a decimal part and keeps at most one decimal otherwise. */
 fun formatMetricValue(value: Double, locale: Locale = Locale.getDefault()): String {
     val format = NumberFormat.getNumberInstance(locale)
     format.maximumFractionDigits = if (value % 1.0 == 0.0) 0 else 1

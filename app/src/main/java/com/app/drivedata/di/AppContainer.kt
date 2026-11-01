@@ -9,6 +9,7 @@ import com.app.drivedata.metrics.MetricsRepository
 import com.app.drivedata.metrics.ObdMetricsCollector
 import com.app.drivedata.metrics.dao.DriveDataDatabase
 import com.app.drivedata.obd.ObdConnectionManager
+import com.app.drivedata.obd.transport.WifiNetworkLookup
 import com.app.drivedata.settings.AppSettingsRepository
 import com.app.drivedata.storage.StorageStatsProvider
 import kotlinx.coroutines.CoroutineScope
@@ -20,7 +21,7 @@ class AppContainer(context: Context) {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val settingsRepository = AppSettingsRepository(appContext)
-    val obdConnectionManager = ObdConnectionManager()
+    val obdConnectionManager = ObdConnectionManager(WifiNetworkLookup(appContext))
     val metricsCollector = ObdMetricsCollector(obdConnectionManager)
     val connectivityObserver = ConnectivityObserver(appContext)
 

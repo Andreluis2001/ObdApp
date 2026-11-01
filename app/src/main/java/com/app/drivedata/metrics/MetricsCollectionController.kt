@@ -1,5 +1,6 @@
 package com.app.drivedata.metrics
 
+import com.app.drivedata.logging.AppLog
 import com.app.drivedata.metrics.model.MetricsSnapshot
 import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
@@ -49,6 +50,9 @@ class MetricsCollectionController(
                 } else {
                     stoppedByUser = false
                     stopInternal()
+                    if (_state.value.snapshot != null) {
+                        _state.value = _state.value.copy(snapshot = null)
+                    }
                 }
             }
         }
@@ -60,6 +64,7 @@ class MetricsCollectionController(
 
         stoppedByUser = false
         val session = ++collectionSession
+        AppLog.i("Metrics collection started (session=$session)")
         _state.value = MetricsCollectionState(isCollecting = true)
         collectionJob =
             scope.launch {
@@ -67,10 +72,17 @@ class MetricsCollectionController(
                     streamFactory().collect { snapshot ->
                         persist(snapshot)
                         _state.value = _state.value.copy(snapshot = snapshot)
+                        AppLog.d(
+                            "Metrics snapshot applied to UI: ${snapshot.readings.size} readings, " +
+                                "timestamp=${snapshot.timestampMillis}",
+                        )
                     }
                 } catch (e: CancellationException) {
                     throw e
-                } catch (_: Exception) {
+                } catch (error: IOException) {
+                    AppLog.w("Metrics collection stopped by an I/O error", error)
+                } catch (error: Exception) {
+                    AppLog.e("Metrics collection failed unexpectedly", error)
                     _state.value = _state.value.copy(error = MetricsCollectionError.UNEXPECTED)
                 } finally {
                     if (session == collectionSession) {
@@ -89,6 +101,7 @@ class MetricsCollectionController(
         collectionSession++
         collectionJob?.cancel()
         collectionJob = null
+        AppLog.i("Metrics collection stopped")
         _state.value = _state.value.copy(isCollecting = false)
     }
 
@@ -100,7 +113,8 @@ class MetricsCollectionController(
             }
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            AppLog.e("Metrics snapshot could not be persisted", error)
             _state.value = _state.value.copy(error = MetricsCollectionError.STORAGE)
         }
     }

@@ -78,8 +78,6 @@ private fun DriveDataApp() {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            // The parameters and connection screens draw their own dark headers, including the
-            // status bar area.
             if (destination == AppDestination.HOME) {
                 TopAppBar(
                     title = { Text(stringResource(R.string.app_name)) },
@@ -127,7 +125,6 @@ private fun DriveDataApp() {
                 ConnectionScreen(
                     viewModel = connectionViewModel,
                     onBack = { destination = AppDestination.HOME },
-                    // The screen header draws under the status bar on its own.
                     modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
                 )
 
@@ -135,7 +132,6 @@ private fun DriveDataApp() {
                 MetricsScreen(
                     viewModel = metricsViewModel,
                     onBack = { destination = AppDestination.HOME },
-                    // The screen header draws under the status bar on its own.
                     modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
                 )
         }

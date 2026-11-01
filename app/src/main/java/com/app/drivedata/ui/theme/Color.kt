@@ -10,7 +10,6 @@ val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
-// Login screen palette from the "Telemetria Veicular" mockup.
 val LoginBackgroundTop = Color(0xFF0B1B33)
 val LoginBackgroundBottom = Color(0xFF050D1A)
 val LoginAccent = Color(0xFF1F7BFF)
@@ -19,7 +18,6 @@ val LoginFieldBorder = Color(0xFF2A3F5F)
 val LoginTextMuted = Color(0xFF9AA9BF)
 val LoginErrorText = Color(0xFFFF6B6B)
 
-// Dashboard palette from the "Telemetria Veicular" mockup.
 val HomeBackground = Color(0xFFF4F6FA)
 val HomeSurface = Color(0xFFFFFFFF)
 val HomeTextPrimary = Color(0xFF0B1B33)

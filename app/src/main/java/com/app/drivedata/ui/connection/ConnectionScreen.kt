@@ -660,5 +660,6 @@ private fun ConnectionFailure.messageRes(): Int =
         ConnectionFailure.INVALID_CONFIGURATION -> R.string.failure_invalid_configuration
         ConnectionFailure.TRANSPORT -> R.string.failure_transport
         ConnectionFailure.ADAPTER_INITIALIZATION -> R.string.failure_adapter_initialization
+        ConnectionFailure.ECU_NO_RESPONSE -> R.string.failure_ecu_no_response
         ConnectionFailure.UNKNOWN -> R.string.failure_unknown
     }
