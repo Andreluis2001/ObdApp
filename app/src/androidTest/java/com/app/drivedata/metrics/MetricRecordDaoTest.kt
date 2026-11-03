@@ -5,8 +5,10 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.app.drivedata.metrics.dao.DriveDataDatabase
+import com.app.drivedata.metrics.dao.MetricReadingEntity
 import com.app.drivedata.metrics.dao.MetricRecordDao
 import com.app.drivedata.metrics.dao.MetricRecordEntity
+import com.app.drivedata.metrics.model.MetricId
 import com.app.drivedata.metrics.model.UploadStatus
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -39,65 +41,133 @@ class MetricRecordDaoTest {
     }
 
     @Test
-    fun findByStatus_returnsPendingRecordsInCollectionOrder() =
+    fun findWithReadingsByStatus_returnsPendingRecordsInCollectionOrder() =
         runBlocking {
-            dao.insert(record(id = "newer", collectedAtMillis = 2_000L))
-            dao.insert(record(id = "older", collectedAtMillis = 1_000L))
-            dao.insert(record(id = "uploaded", collectedAtMillis = 500L, status = UploadStatus.UPLOADED))
+            insertRecord("newer", collectedAtMillis = 2_000L)
+            insertRecord("older", collectedAtMillis = 1_000L)
+            insertRecord("uploaded", collectedAtMillis = 500L, status = UploadStatus.UPLOADED)
 
-            val pending = dao.findByStatus(UploadStatus.PENDING)
+            val pending = dao.findWithReadingsByStatus("admin", UploadStatus.PENDING)
 
-            assertEquals(listOf("older", "newer"), pending.map { it.id })
+            assertEquals(listOf("older", "newer"), pending.map { it.record.id })
+            assertEquals(listOf(MetricId.RPM.name), pending.first().readings.map { it.metricId })
         }
 
     @Test
-    fun updateStatus_removesRecordFromPendingQueue() =
+    fun findWithReadingsByStatus_onlyReturnsTheOwnersRecords() =
         runBlocking {
-            dao.insert(record(id = "record-1", collectedAtMillis = 1_000L))
+            insertRecord("mine", owner = "admin", collectedAtMillis = 1_000L)
+            insertRecord("other", owner = "someone-else", collectedAtMillis = 2_000L)
 
-            dao.updateStatus("record-1", UploadStatus.UPLOADED)
+            val pending = dao.findWithReadingsByStatus("admin", UploadStatus.PENDING)
 
-            assertTrue(dao.findByStatus(UploadStatus.PENDING).isEmpty())
-            assertEquals(1, dao.findByStatus(UploadStatus.UPLOADED).size)
+            assertEquals(listOf("mine"), pending.map { it.record.id })
         }
 
     @Test
-    fun observeCountByStatus_countsOnlyMatchingRecords() =
+    fun markUploaded_removesRecordsFromThePendingQueue() =
         runBlocking {
-            dao.insert(record(id = "pending-1", collectedAtMillis = 1_000L))
-            dao.insert(record(id = "uploaded", collectedAtMillis = 2_000L, status = UploadStatus.UPLOADED))
-            dao.insert(record(id = "pending-2", collectedAtMillis = 3_000L))
+            insertRecord("record-1", collectedAtMillis = 1_000L)
 
-            assertEquals(2, dao.observeCountByStatus(UploadStatus.PENDING).first())
-            assertEquals(1, dao.observeCountByStatus(UploadStatus.UPLOADED).first())
+            dao.markUploaded(
+                ids = listOf("record-1"),
+                status = UploadStatus.UPLOADED,
+                pendingStatus = UploadStatus.PENDING,
+                uploadedAtMillis = 5_000L,
+            )
+
+            assertTrue(dao.findWithReadingsByStatus("admin", UploadStatus.PENDING).isEmpty())
+            val uploaded = dao.findWithReadingsById("record-1")!!.record
+            assertEquals(UploadStatus.UPLOADED, uploaded.uploadStatus)
+            assertEquals(5_000L, uploaded.uploadedAtMillis)
         }
 
     @Test
-    fun observeLatestCollectedAtMillis_returnsTheNewestTimestamp() =
+    fun markRejected_keepsTheRecordAndItsReading() =
         runBlocking {
-            dao.insert(record(id = "older", collectedAtMillis = 1_000L))
-            dao.insert(record(id = "newer", collectedAtMillis = 3_000L))
-            dao.insert(record(id = "middle", collectedAtMillis = 2_000L))
+            insertRecord("record-1", collectedAtMillis = 1_000L)
 
-            assertEquals(3_000L, dao.observeLatestCollectedAtMillis().first())
+            dao.markRejected(
+                ids = listOf("record-1"),
+                rejectedStatus = UploadStatus.REJECTED,
+                pendingStatus = UploadStatus.PENDING,
+                error = "invalid_rpm: rpm must be >= 0",
+            )
+
+            val rejected = dao.findWithReadingsById("record-1")!!
+            assertEquals(UploadStatus.REJECTED, rejected.record.uploadStatus)
+            assertEquals("invalid_rpm: rpm must be >= 0", rejected.record.lastError)
+            assertEquals(1, rejected.readings.size)
         }
 
     @Test
-    fun observeLatestCollectedAtMillis_isNullWithoutRecords() =
+    fun observeCountByStatus_countsOnlyMatchingRecordsForTheOwner() =
         runBlocking {
-            assertEquals(null, dao.observeLatestCollectedAtMillis().first())
+            insertRecord("pending-1", owner = "admin", collectedAtMillis = 1_000L)
+            insertRecord("uploaded", owner = "admin", collectedAtMillis = 2_000L, status = UploadStatus.UPLOADED)
+            insertRecord("pending-2", owner = "admin", collectedAtMillis = 3_000L)
+            insertRecord("other-pending", owner = "someone-else", collectedAtMillis = 4_000L)
+
+            assertEquals(2, dao.observeCountByStatus("admin", UploadStatus.PENDING).first())
+            assertEquals(1, dao.observeCountByStatus("admin", UploadStatus.UPLOADED).first())
+            assertEquals(1, dao.observeCountByStatus("someone-else", UploadStatus.PENDING).first())
         }
 
-    private fun record(
+    @Test
+    fun observeLatestUploadedAtMillis_returnsTheNewestUploadTime() =
+        runBlocking {
+            insertRecord("older", collectedAtMillis = 1_000L, status = UploadStatus.UPLOADED, uploadedAtMillis = 2_000L)
+            insertRecord("newer", collectedAtMillis = 2_000L, status = UploadStatus.UPLOADED, uploadedAtMillis = 3_000L)
+            insertRecord("pending", collectedAtMillis = 3_000L)
+
+            assertEquals(
+                3_000L,
+                dao.observeLatestUploadedAtMillis("admin", UploadStatus.UPLOADED).first(),
+            )
+        }
+
+    @Test
+    fun pruneUploadedBefore_removesOnlyOldUploadedRecordsAndTheirReadings() =
+        runBlocking {
+            insertRecord("old-uploaded", collectedAtMillis = 1_000L, status = UploadStatus.UPLOADED, uploadedAtMillis = 1_000L)
+            insertRecord("new-uploaded", collectedAtMillis = 2_000L, status = UploadStatus.UPLOADED, uploadedAtMillis = 9_000L)
+            insertRecord("old-pending", collectedAtMillis = 3_000L)
+
+            val pruned = dao.pruneUploadedBefore(cutoffMillis = 5_000L)
+
+            assertEquals(1, pruned)
+            assertEquals(null, dao.findWithReadingsById("old-uploaded"))
+            assertEquals(MetricId.RPM.name, dao.findWithReadingsById("new-uploaded")!!.readings.single().metricId)
+            assertEquals(1, dao.findWithReadingsByStatus("admin", UploadStatus.PENDING).size)
+        }
+
+    private suspend fun insertRecord(
         id: String,
+        owner: String = "admin",
         collectedAtMillis: Long,
         status: UploadStatus = UploadStatus.PENDING,
-    ): MetricRecordEntity =
-        MetricRecordEntity(
-            id = id,
-            vin = "93YBSR7RHEJ298116",
-            rpm = 900.0,
-            collectedAtMillis = collectedAtMillis,
-            uploadStatus = status,
+        uploadedAtMillis: Long? = null,
+    ) {
+        dao.insertWithReadings(
+            record =
+                MetricRecordEntity(
+                    id = id,
+                    ownerUsername = owner,
+                    vin = "93YBSR7RHEJ298116",
+                    collectedAtMillis = collectedAtMillis,
+                    uploadStatus = status,
+                    uploadedAtMillis = uploadedAtMillis,
+                ),
+            readings =
+                listOf(
+                    MetricReadingEntity(
+                        recordId = id,
+                        metricId = MetricId.RPM.name,
+                        unit = "RPM",
+                        value = 900.0,
+                        isAvailable = true,
+                    ),
+                ),
         )
+    }
 }

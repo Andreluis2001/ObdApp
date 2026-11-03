@@ -1,0 +1,58 @@
+package com.app.drivedata.metrics.dao
+
+import androidx.room.testing.MigrationTestHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class DriveDataDatabaseMigrationTest {
+
+    @get:Rule
+    val helper: MigrationTestHelper =
+        MigrationTestHelper(
+            InstrumentationRegistry.getInstrumentation(),
+            DriveDataDatabase::class.java,
+            emptyList(),
+            FrameworkSQLiteOpenHelperFactory(),
+        )
+
+    @Test
+    fun migrate2To3_discardsLegacyTelemetryButKeepsUsers() {
+        helper.createDatabase(TEST_DATABASE, 2).apply {
+            execSQL(
+                "INSERT INTO `users` (`username`, `password_hash`, `password_salt`, `created_at_millis`) " +
+                    "VALUES ('admin', 'hash', 'salt', 1)",
+            )
+            execSQL(
+                "INSERT INTO `metric_records` (`id`, `vin`, `rpm`, `collected_at_millis`, `upload_status`) " +
+                    "VALUES ('legacy', 'VIN', 900.0, 1, 'PENDING')",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(TEST_DATABASE, 3, true, DriveDataDatabase.MIGRATION_2_3).apply {
+            query("SELECT COUNT(*) FROM `metric_records`").use { cursor ->
+                cursor.moveToFirst()
+                assertEquals(0, cursor.getInt(0))
+            }
+            query("SELECT COUNT(*) FROM `users`").use { cursor ->
+                cursor.moveToFirst()
+                assertEquals(1, cursor.getInt(0))
+            }
+            query("SELECT COUNT(*) FROM `metric_readings`").use { cursor ->
+                cursor.moveToFirst()
+                assertEquals(0, cursor.getInt(0))
+            }
+            close()
+        }
+    }
+
+    private companion object {
+        const val TEST_DATABASE = "migration-test.db"
+    }
+}

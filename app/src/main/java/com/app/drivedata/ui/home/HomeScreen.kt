@@ -29,12 +29,14 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Thermostat
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -53,6 +55,7 @@ import com.app.drivedata.metrics.model.MetricId
 import com.app.drivedata.metrics.model.MetricsSnapshot
 import com.app.drivedata.metrics.model.ReadingValue
 import com.app.drivedata.obd.model.ObdConnectionState
+import com.app.drivedata.sync.SyncError
 import com.app.drivedata.ui.common.formatBytes
 import com.app.drivedata.ui.common.formatClockTime
 import com.app.drivedata.ui.common.formatDateTime
@@ -79,6 +82,7 @@ fun HomeScreen(
     HomeContent(
         state = state,
         onSeeAllReadings = onSeeAllReadings,
+        onSyncNow = viewModel::syncNow,
         modifier = modifier,
     )
 }
@@ -87,6 +91,7 @@ fun HomeScreen(
 private fun HomeContent(
     state: HomeUiState,
     onSeeAllReadings: () -> Unit,
+    onSyncNow: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -99,7 +104,7 @@ private fun HomeContent(
     ) {
         ConnectionHeader(isConnected = state.isConnected)
         VehicleCard(vehicleName = state.vehicleName)
-        CollectionCard(state = state)
+        CollectionCard(state = state, onSyncNow = onSyncNow)
 
         SectionTitle(stringResource(R.string.home_main_parameters))
         MainParameters(snapshot = state.snapshot)
@@ -172,7 +177,7 @@ private fun VehicleCard(vehicleName: String) {
 }
 
 @Composable
-private fun CollectionCard(state: HomeUiState) {
+private fun CollectionCard(state: HomeUiState, onSyncNow: () -> Unit) {
     val adapterConnected = state.connection is ObdConnectionState.Connected
     Card(
         colors = CardDefaults.cardColors(containerColor = HomeSurface),
@@ -204,7 +209,7 @@ private fun CollectionCard(state: HomeUiState) {
                 DetailRow(
                     icon = Icons.Filled.Sync,
                     label = stringResource(R.string.home_last_sync),
-                    value = lastSyncText(state.lastCollectedAtMillis),
+                    value = lastSyncText(state.lastSyncedAtMillis),
                     valueColor = HomeTextPrimary,
                 )
                 DetailRow(
@@ -217,6 +222,31 @@ private fun CollectionCard(state: HomeUiState) {
                     ),
                     valueColor = HomeTextPrimary,
                 )
+                if (state.rejectedCount > 0) {
+                    DetailRow(
+                        icon = Icons.Filled.Warning,
+                        label = stringResource(R.string.home_rejected_data),
+                        value = stringResource(R.string.home_rejected_value, state.rejectedCount),
+                        valueColor = HomeRed,
+                    )
+                }
+                state.syncError?.let { error ->
+                    Text(
+                        text = stringResource(error.messageRes()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = HomeRed,
+                    )
+                }
+                TextButton(
+                    onClick = onSyncNow,
+                    enabled = state.canSyncNow,
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (state.isSyncing) R.string.home_sync_in_progress else R.string.home_sync_now,
+                        ),
+                    )
+                }
             }
         }
     }
@@ -546,6 +576,15 @@ private fun lastSyncText(millis: Long?): String {
         formatDateTime(millis)
     }
 }
+
+@Composable
+private fun SyncError.messageRes(): Int =
+    when (this) {
+        SyncError.NETWORK -> R.string.home_sync_error_network
+        SyncError.AUTH -> R.string.home_sync_error_auth
+        SyncError.SERVER -> R.string.home_sync_error_server
+        SyncError.UNKNOWN -> R.string.home_sync_error_unknown
+    }
 
 private fun MetricsSnapshot?.reading(id: MetricId): ReadingValue? =
     this?.readings?.firstOrNull { it.id == id }?.value

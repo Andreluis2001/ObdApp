@@ -87,6 +87,14 @@
     <string name="home_sync_today">Hoje, %1$s</string>
     <string name="home_sync_never">Nunca</string>
     <string name="home_pending_value">%1$d registros (~%2$s)</string>
+    <string name="home_rejected_data">Registros rejeitados</string>
+    <string name="home_rejected_value">%1$d registros</string>
+    <string name="home_sync_now">Sincronizar agora</string>
+    <string name="home_sync_in_progress">Sincronizando\u2026</string>
+    <string name="home_sync_error_network">Sem conexão com o servidor. Os dados serão enviados depois.</string>
+    <string name="home_sync_error_auth">Sessão inválida. Entre novamente para sincronizar.</string>
+    <string name="home_sync_error_server">O servidor rejeitou o envio. Os registros foram mantidos.</string>
+    <string name="home_sync_error_unknown">Não foi possível sincronizar os dados.</string>
     <string name="home_adapter">ELM327</string>
     <string name="home_internet">Internet</string>
     <string name="home_storage">Armazenamento local</string>

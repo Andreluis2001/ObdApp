@@ -1,5 +1,6 @@
 package com.app.drivedata.metrics
 
+import com.app.drivedata.auth.AuthSession
 import com.app.drivedata.logging.AppLog
 import com.app.drivedata.metrics.model.MetricsSnapshot
 import com.app.drivedata.obd.model.EcuStatus
@@ -31,6 +32,8 @@ class MetricsCollectionController(
     private val connectionState: StateFlow<ObdConnectionState>,
     private val streamFactory: () -> Flow<MetricsSnapshot>,
     private val repository: MetricsRepository,
+    private val authSession: AuthSession,
+    private val onSnapshotPersisted: () -> Unit = {},
 ) {
 
     private val _state = MutableStateFlow(MetricsCollectionState())
@@ -106,8 +109,13 @@ class MetricsCollectionController(
     }
 
     private suspend fun persist(snapshot: MetricsSnapshot) {
+        val owner = authSession.signedInUser.value
+        if (owner == null) {
+            AppLog.w("Metrics snapshot not persisted: no signed-in user")
+            return
+        }
         try {
-            repository.save(snapshot)
+            repository.save(snapshot, owner)
             if (_state.value.error == MetricsCollectionError.STORAGE) {
                 _state.value = _state.value.copy(error = null)
             }
@@ -116,7 +124,10 @@ class MetricsCollectionController(
         } catch (error: Exception) {
             AppLog.e("Metrics snapshot could not be persisted", error)
             _state.value = _state.value.copy(error = MetricsCollectionError.STORAGE)
+            return
         }
+        runCatching { onSnapshotPersisted() }
+            .onFailure { AppLog.w("Telemetry sync could not be scheduled", it) }
     }
 }
 
