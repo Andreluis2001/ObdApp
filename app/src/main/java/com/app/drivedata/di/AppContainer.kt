@@ -5,9 +5,11 @@ import com.app.drivedata.api.ApiClient
 import com.app.drivedata.auth.AuthSession
 import com.app.drivedata.auth.UserRepository
 import com.app.drivedata.connectivity.ConnectivityObserver
+import com.app.drivedata.metrics.ActiveVehicleCollection
 import com.app.drivedata.metrics.MetricsCollectionController
 import com.app.drivedata.metrics.MetricsRepository
 import com.app.drivedata.metrics.ObdMetricsCollector
+import com.app.drivedata.metrics.toActiveVehicleCollection
 import com.app.drivedata.metrics.dao.DriveDataDatabase
 import com.app.drivedata.obd.ObdConnectionManager
 import com.app.drivedata.obd.PidDiscoveryCoordinator
@@ -20,6 +22,10 @@ import com.app.drivedata.vehicle.VehicleRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class AppContainer(context: Context) {
@@ -38,6 +44,12 @@ class AppContainer(context: Context) {
     val authSession = AuthSession()
     val vehicleRepository = VehicleRepository(database.vehicleDao(), authSession)
 
+    val activeVehicleCollection: StateFlow<ActiveVehicleCollection?> =
+        vehicleRepository
+            .observeActiveVehicle()
+            .map { it?.toActiveVehicleCollection() }
+            .stateIn(applicationScope, SharingStarted.Eagerly, null)
+
     private val apiClient = ApiClient()
     val telemetrySyncEngine = TelemetrySyncEngine(database.metricRecordDao(), apiClient.telemetryApi)
     val syncScheduler = SyncScheduler(appContext)
@@ -49,6 +61,7 @@ class AppContainer(context: Context) {
         MetricsCollectionController(
             scope = applicationScope,
             connectionState = obdConnectionManager.state,
+            activeVehicle = activeVehicleCollection,
             streamFactory = metricsCollector::stream,
             repository = metricsRepository,
             authSession = authSession,
@@ -64,7 +77,10 @@ class AppContainer(context: Context) {
                 if (user == null) {
                     metricsCollectionController.stopCollection()
                     syncScheduler.cancel()
+                    obdConnectionManager.disconnect()
                 } else {
+                    // Collection starts on its own once the active vehicle has a verified
+                    // connection and discovered capabilities. Do not auto-connect here.
                     metricsCollectionController.startCollection()
                     syncScheduler.syncNow()
                 }

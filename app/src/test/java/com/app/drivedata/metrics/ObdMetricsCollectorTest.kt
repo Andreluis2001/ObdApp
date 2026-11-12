@@ -34,7 +34,7 @@ class ObdMetricsCollectorTest {
             val manager = ObdConnectionManager(transportFactory = { transport })
             manager.connect(CONFIG)
 
-            val snapshot = manager.toCollector().stream().first()
+            val snapshot = manager.toCollector().stream(defaultMetricCatalog).first()
 
             assertEquals("93YBSR7RHEJ298116", snapshot.vin)
             assertEquals(8, snapshot.readings.size)
@@ -69,7 +69,7 @@ class ObdMetricsCollectorTest {
             val manager = ObdConnectionManager(transportFactory = { transport })
             manager.connect(CONFIG)
 
-            val snapshot = manager.toCollector().stream().first()
+            val snapshot = manager.toCollector().stream(defaultMetricCatalog).first()
 
             val coolant = snapshot.readingFor(MetricId.COOLANT_TEMPERATURE)
             assertEquals(ReadingValue.Unavailable, coolant.value)
@@ -98,7 +98,7 @@ class ObdMetricsCollectorTest {
             val manager = ObdConnectionManager(transportFactory = { transport })
             manager.connect(CONFIG)
 
-            val snapshot = manager.toCollector().stream().first()
+            val snapshot = manager.toCollector().stream(defaultMetricCatalog).first()
 
             assertNull(snapshot.vin)
         }
@@ -108,7 +108,17 @@ class ObdMetricsCollectorTest {
         runBlocking {
             val manager = ObdConnectionManager(transportFactory = { FakeObdTransport("") })
 
-            val snapshots = manager.toCollector().stream().toList()
+            val snapshots = manager.toCollector().stream(defaultMetricCatalog).toList()
+
+            assertTrue("expected no emissions, got $snapshots", snapshots.isEmpty())
+        }
+
+    @Test
+    fun stream_completesWithoutEmitting_whenCatalogIsEmpty() =
+        runBlocking {
+            val manager = ObdConnectionManager(transportFactory = { FakeObdTransport("") })
+
+            val snapshots = manager.toCollector().stream(emptyList()).toList()
 
             assertTrue("expected no emissions, got $snapshots", snapshots.isEmpty())
         }
@@ -121,7 +131,7 @@ class ObdMetricsCollectorTest {
             manager.connect(CONFIG)
             assertTrue("setup failed: ${manager.state.value}", manager.state.value is ObdConnectionState.Connected)
 
-            val failure = runCatching { manager.toCollector().stream().first() }.exceptionOrNull()
+            val failure = runCatching { manager.toCollector().stream(defaultMetricCatalog).first() }.exceptionOrNull()
 
             assertTrue("expected IOException but was $failure", failure is IOException)
             val state = manager.state.value

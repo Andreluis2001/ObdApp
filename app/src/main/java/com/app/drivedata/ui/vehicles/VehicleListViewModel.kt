@@ -51,6 +51,10 @@ class VehicleListViewModel(
 
     fun selectActive(vehicleId: String) {
         viewModelScope.launch {
+            val target = uiState.value.vehicles.firstOrNull { it.id == vehicleId }
+            if (target != null && isDisconnectedFrom(target)) {
+                connectionManager.disconnect()
+            }
             if (vehicleRepository.setActive(vehicleId)) {
                 error.value = null
             } else {
@@ -58,6 +62,13 @@ class VehicleListViewModel(
             }
         }
     }
+
+    /**
+     * The active vehicle's adapter may differ from the one currently linked. Do not keep a live
+     * link to another vehicle's adapter after switching, matching the no-auto-connect rule.
+     */
+    private fun isDisconnectedFrom(target: Vehicle): Boolean =
+        connectionManager.state.value !is ObdConnectionState.Disconnected && !isConnectedTo(target)
 
     fun delete(vehicle: Vehicle) {
         viewModelScope.launch {

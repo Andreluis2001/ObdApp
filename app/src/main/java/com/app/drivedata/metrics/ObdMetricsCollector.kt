@@ -20,13 +20,16 @@ import kotlinx.coroutines.isActive
 
 class ObdMetricsCollector(
     private val connectionManager: ObdConnectionManager,
-    private val catalog: List<MetricDefinition> = defaultMetricCatalog,
     private val pollIntervalMs: Long = DEFAULT_POLL_INTERVAL_MS,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
- 
-    fun stream(): Flow<MetricsSnapshot> =
+
+    fun stream(catalog: List<MetricDefinition>): Flow<MetricsSnapshot> =
         flow {
+            if (catalog.isEmpty()) {
+                AppLog.i("OBD metric stream not started: no PIDs enabled for the active vehicle")
+                return@flow
+            }
             if (!connectionManager.state.value.isVerified()) {
                 AppLog.w("OBD metric stream not started: connection is ${connectionManager.state.value}")
                 return@flow
@@ -39,7 +42,7 @@ class ObdMetricsCollector(
                         AppLog.w("OBD metric stream stopping: ${connectionManager.state.value}")
                         break
                     }
-                    val snapshot = readSnapshot(vin) ?: break
+                    val snapshot = readSnapshot(vin, catalog) ?: break
                     emit(snapshot)
                     delay(pollIntervalMs)
                 }
@@ -48,7 +51,10 @@ class ObdMetricsCollector(
             }
         }
 
-    private suspend fun readSnapshot(vin: String?): MetricsSnapshot? {
+    private suspend fun readSnapshot(
+        vin: String?,
+        catalog: List<MetricDefinition>,
+    ): MetricsSnapshot? {
         val readings = ArrayList<MetricReading>(catalog.size)
         for (definition in catalog) {
             readings += readMetric(definition)

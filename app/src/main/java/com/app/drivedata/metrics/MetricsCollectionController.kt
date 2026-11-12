@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.io.IOException
 
@@ -30,7 +31,8 @@ data class MetricsCollectionState(
 class MetricsCollectionController(
     private val scope: CoroutineScope,
     private val connectionState: StateFlow<ObdConnectionState>,
-    private val streamFactory: () -> Flow<MetricsSnapshot>,
+    private val activeVehicle: StateFlow<ActiveVehicleCollection?>,
+    private val streamFactory: (List<MetricDefinition>) -> Flow<MetricsSnapshot>,
     private val repository: MetricsRepository,
     private val authSession: AuthSession,
     private val onSnapshotPersisted: () -> Unit = {},
@@ -40,25 +42,23 @@ class MetricsCollectionController(
     val state: StateFlow<MetricsCollectionState> = _state.asStateFlow()
 
     private var collectionJob: Job? = null
-    
+
     private var collectionSession = 0
 
     @Volatile private var stoppedByUser = false
 
     @Volatile private var maintenancePaused = false
 
+    private var runningConfig: ActiveVehicleCollection? = null
+
+    private var lastVehicleId: String? = null
+
     init {
         scope.launch {
-            connectionState.collect { connection ->
-                if (connection.isCollectible()) {
-                    if (!stoppedByUser && !maintenancePaused) startCollection()
-                } else {
-                    if (!maintenancePaused) stoppedByUser = false
-                    stopInternal()
-                    if (_state.value.snapshot != null) {
-                        _state.value = _state.value.copy(snapshot = null)
-                    }
-                }
+            combine(connectionState, activeVehicle) { connection, vehicle ->
+                connection to vehicle
+            }.collect { (connection, vehicle) ->
+                onCollectionInputsChanged(connection, vehicle)
             }
         }
     }
@@ -76,21 +76,75 @@ class MetricsCollectionController(
     /** Allows collection to restart after a setup sequence, unless the user stopped it manually. */
     fun resumeAfterMaintenance() {
         maintenancePaused = false
-        if (!stoppedByUser) startCollection()
+        if (!stoppedByUser) startIfEligible()
     }
 
+    /** Explicit user action: clears a previous pause and starts when the active vehicle allows it. */
     fun startCollection() {
-        if (collectionJob?.isActive == true) return
-        if (!connectionState.value.isCollectible()) return
-
         stoppedByUser = false
+        if (maintenancePaused) return
+        startIfEligible()
+    }
+
+    fun stopCollection() {
+        stoppedByUser = true
+        stopInternal()
+    }
+
+    private fun onCollectionInputsChanged(
+        connection: ObdConnectionState,
+        vehicle: ActiveVehicleCollection?,
+    ) {
+        if (vehicle?.vehicleId != lastVehicleId) {
+            lastVehicleId = vehicle?.vehicleId
+            clearSnapshot()
+        }
+
+        if (!isCollectible(connection, vehicle)) {
+            if (!maintenancePaused) stoppedByUser = false
+            stopInternal()
+            runningConfig = null
+            clearSnapshot()
+            return
+        }
+
+        if (maintenancePaused) {
+            stopInternal()
+            return
+        }
+
+        if (stoppedByUser) {
+            stopInternal()
+            return
+        }
+
+        if (collectionJob?.isActive == true && runningConfig == vehicle) return
+
+        stopInternal()
+        startInternal(vehicle!!)
+    }
+
+    private fun startIfEligible() {
+        val vehicle = activeVehicle.value ?: return
+        if (!isCollectible(connectionState.value, vehicle)) return
+        startInternal(vehicle)
+    }
+
+    private fun startInternal(vehicle: ActiveVehicleCollection) {
+        if (collectionJob?.isActive == true) return
+        if (!isCollectible(connectionState.value, vehicle)) return
+
+        runningConfig = vehicle
         val session = ++collectionSession
-        AppLog.i("Metrics collection started (session=$session)")
+        AppLog.i(
+            "Metrics collection started (session=$session, vehicle=${vehicle.vehicleId}, " +
+                "pids=${vehicle.catalog.size})",
+        )
         _state.value = MetricsCollectionState(isCollecting = true)
         collectionJob =
             scope.launch {
                 try {
-                    streamFactory().collect { snapshot ->
+                    streamFactory(vehicle.catalog).collect { snapshot ->
                         persist(snapshot)
                         _state.value = _state.value.copy(snapshot = snapshot)
                         AppLog.d(
@@ -113,17 +167,18 @@ class MetricsCollectionController(
             }
     }
 
-    fun stopCollection() {
-        stoppedByUser = true
-        stopInternal()
-    }
-
     private fun stopInternal() {
         collectionSession++
         collectionJob?.cancel()
         collectionJob = null
         AppLog.i("Metrics collection stopped")
         _state.value = _state.value.copy(isCollecting = false)
+    }
+
+    private fun clearSnapshot() {
+        if (_state.value.snapshot != null) {
+            _state.value = _state.value.copy(snapshot = null)
+        }
     }
 
     private suspend fun persist(snapshot: MetricsSnapshot) {
@@ -149,5 +204,12 @@ class MetricsCollectionController(
     }
 }
 
-private fun ObdConnectionState.isCollectible(): Boolean =
-    this is ObdConnectionState.Connected && ecuStatus == EcuStatus.VERIFIED
+private fun isCollectible(
+    connection: ObdConnectionState,
+    vehicle: ActiveVehicleCollection?,
+): Boolean {
+    if (vehicle == null || !vehicle.hasDiscovery || vehicle.catalog.isEmpty()) return false
+    if (connection !is ObdConnectionState.Connected) return false
+    if (connection.ecuStatus != EcuStatus.VERIFIED) return false
+    return vehicle.matches(connection.config)
+}

@@ -113,8 +113,9 @@ private fun MetricsContent(
     ) {
         ParametersHeader(
             vehicleName = state.vehicleName,
+            hasVehicle = state.hasVehicle,
             isCollecting = state.isCollecting,
-            canToggleCollection = state.isEcuVerified,
+            canToggleCollection = state.isEcuVerified && state.canCollect,
             onToggleCollection = onToggleCollection,
             onBack = onBack,
         )
@@ -129,6 +130,7 @@ private fun MetricsContent(
 @Composable
 private fun ParametersHeader(
     vehicleName: String,
+    hasVehicle: Boolean,
     isCollecting: Boolean,
     canToggleCollection: Boolean,
     onToggleCollection: () -> Unit,
@@ -157,7 +159,12 @@ private fun ParametersHeader(
                     color = Color.White,
                 )
                 Text(
-                    text = vehicleName,
+                    text =
+                        if (hasVehicle) {
+                            vehicleName
+                        } else {
+                            stringResource(R.string.metrics_no_active_vehicle)
+                        },
                     style = MaterialTheme.typography.bodySmall,
                     color = LoginTextMuted,
                 )
@@ -251,6 +258,16 @@ private fun RealtimeParameters(state: MetricsUiState, modifier: Modifier = Modif
         if (!state.isEcuVerified) {
             Text(
                 text = stringResource(R.string.metrics_offline_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = HomeTextSecondary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(HomeBlue.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+            )
+        } else if (!state.canCollect) {
+            Text(
+                text = stringResource(R.string.metrics_collection_unavailable),
                 style = MaterialTheme.typography.bodySmall,
                 color = HomeTextSecondary,
                 modifier = Modifier
@@ -471,7 +488,12 @@ private fun Diagnostics(state: MetricsUiState, modifier: Modifier = Modifier) {
         DiagnosticsCard(title = stringResource(R.string.metrics_diag_information)) {
             DiagnosticRow(
                 label = stringResource(R.string.metrics_diag_vehicle),
-                value = state.vehicleName,
+                value =
+                    if (state.hasVehicle) {
+                        state.vehicleName
+                    } else {
+                        stringResource(R.string.metrics_unavailable)
+                    },
             )
             DiagnosticRow(
                 label = stringResource(R.string.metrics_diag_vin),

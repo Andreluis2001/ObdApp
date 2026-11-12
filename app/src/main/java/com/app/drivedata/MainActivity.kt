@@ -22,7 +22,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -43,6 +42,10 @@ import com.app.drivedata.ui.vehicles.VehicleListScreen
 import com.app.drivedata.ui.vehicles.VehicleListViewModel
 import com.app.drivedata.ui.vehicles.add.AddVehicleScreen
 import com.app.drivedata.ui.vehicles.add.AddVehicleViewModel
+import com.app.drivedata.ui.vehicles.details.VehicleDetailsScreen
+import com.app.drivedata.ui.vehicles.details.VehicleDetailsViewModel
+import com.app.drivedata.ui.vehicles.edit.EditVehicleScreen
+import com.app.drivedata.ui.vehicles.edit.EditVehicleViewModel
 import java.util.UUID
 
 class MainActivity : ComponentActivity() {
@@ -59,13 +62,7 @@ class MainActivity : ComponentActivity() {
 
 private enum class AppDestination { HOME, CONNECTION, METRICS }
 
-private enum class VehicleRoute { LIST, ADD }
-
-private val VehicleRouteSaver =
-    Saver<VehicleRoute?, String>(
-        save = { route -> route?.name.orEmpty() },
-        restore = { name -> name.takeIf { it.isNotEmpty() }?.let(VehicleRoute::valueOf) },
-    )
+private enum class VehicleRoute { LIST, ADD, DETAILS, EDIT }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,9 +88,8 @@ private fun DriveDataApp() {
         viewModel(factory = VehicleListViewModel.factory(application))
 
     var destination by rememberSaveable { mutableStateOf(AppDestination.HOME) }
-    var vehicleRoute by rememberSaveable(stateSaver = VehicleRouteSaver) {
-        mutableStateOf<VehicleRoute?>(null)
-    }
+    var vehicleRoute by rememberSaveable { mutableStateOf<VehicleRoute?>(null) }
+    var selectedVehicleId by rememberSaveable { mutableStateOf<String?>(null) }
     var addVehicleSession by rememberSaveable { mutableStateOf(0) }
     val addVehicleSessionKey = rememberSaveable { UUID.randomUUID().toString() }
     val addVehicleViewModel: AddVehicleViewModel? =
@@ -105,9 +101,46 @@ private fun DriveDataApp() {
         } else {
             null
         }
+    val detailsVehicleId = selectedVehicleId
+    val vehicleDetailsViewModel: VehicleDetailsViewModel? =
+        if (vehicleRoute == VehicleRoute.DETAILS && detailsVehicleId != null) {
+            viewModel(
+                key = "vehicle-details-$detailsVehicleId",
+                factory = VehicleDetailsViewModel.factory(application, detailsVehicleId),
+            )
+        } else {
+            null
+        }
+    val editVehicleViewModel: EditVehicleViewModel? =
+        if (vehicleRoute == VehicleRoute.EDIT && detailsVehicleId != null) {
+            viewModel(
+                key = "vehicle-edit-$detailsVehicleId",
+                factory = EditVehicleViewModel.factory(application, detailsVehicleId),
+            )
+        } else {
+            null
+        }
 
-    BackHandler(enabled = vehicleRoute == VehicleRoute.LIST) {
-        vehicleRoute = null
+    BackHandler(
+        enabled =
+            vehicleRoute == VehicleRoute.LIST ||
+                vehicleRoute == VehicleRoute.DETAILS ||
+                vehicleRoute == VehicleRoute.EDIT,
+    ) {
+        when (vehicleRoute) {
+            VehicleRoute.LIST -> {
+                selectedVehicleId = null
+                vehicleRoute = null
+            }
+
+            VehicleRoute.DETAILS -> {
+                vehicleDetailsViewModel?.onScreenDisposed()
+                vehicleRoute = VehicleRoute.LIST
+            }
+
+            VehicleRoute.EDIT -> vehicleRoute = VehicleRoute.DETAILS
+            else -> Unit
+        }
     }
 
     Scaffold(
@@ -130,6 +163,8 @@ private fun DriveDataApp() {
                     selected = destination == AppDestination.HOME,
                     onClick = {
                         addVehicleViewModel?.onScreenDisposed()
+                        vehicleDetailsViewModel?.onScreenDisposed()
+                        selectedVehicleId = null
                         vehicleRoute = null
                         destination = AppDestination.HOME
                     },
@@ -140,6 +175,8 @@ private fun DriveDataApp() {
                     selected = vehicleRoute == null && destination == AppDestination.CONNECTION,
                     onClick = {
                         addVehicleViewModel?.onScreenDisposed()
+                        vehicleDetailsViewModel?.onScreenDisposed()
+                        selectedVehicleId = null
                         vehicleRoute = null
                         destination = AppDestination.CONNECTION
                     },
@@ -150,6 +187,8 @@ private fun DriveDataApp() {
                     selected = vehicleRoute == null && destination == AppDestination.METRICS,
                     onClick = {
                         addVehicleViewModel?.onScreenDisposed()
+                        vehicleDetailsViewModel?.onScreenDisposed()
+                        selectedVehicleId = null
                         vehicleRoute = null
                         destination = AppDestination.METRICS
                     },
@@ -165,10 +204,17 @@ private fun DriveDataApp() {
             VehicleRoute.LIST ->
                 VehicleListScreen(
                     viewModel = vehicleListViewModel,
-                    onBack = { vehicleRoute = null },
+                    onBack = {
+                        selectedVehicleId = null
+                        vehicleRoute = null
+                    },
                     onAddVehicle = {
                         addVehicleSession += 1
                         vehicleRoute = VehicleRoute.ADD
+                    },
+                    onOpenVehicle = { vehicleId ->
+                        selectedVehicleId = vehicleId
+                        vehicleRoute = VehicleRoute.DETAILS
                     },
                     modifier = routedModifier,
                 )
@@ -179,6 +225,36 @@ private fun DriveDataApp() {
                         viewModel = viewModel,
                         onExit = { vehicleRoute = VehicleRoute.LIST },
                         onSaved = { vehicleRoute = VehicleRoute.LIST },
+                        modifier = routedModifier,
+                    )
+                }
+
+            VehicleRoute.DETAILS ->
+                vehicleDetailsViewModel?.let { viewModel ->
+                    VehicleDetailsScreen(
+                        viewModel = viewModel,
+                        onBack = {
+                            viewModel.onScreenDisposed()
+                            vehicleRoute = VehicleRoute.LIST
+                        },
+                        onEdit = { vehicleId ->
+                            selectedVehicleId = vehicleId
+                            vehicleRoute = VehicleRoute.EDIT
+                        },
+                        onDeleted = {
+                            selectedVehicleId = null
+                            vehicleRoute = VehicleRoute.LIST
+                        },
+                        modifier = routedModifier,
+                    )
+                }
+
+            VehicleRoute.EDIT ->
+                editVehicleViewModel?.let { viewModel ->
+                    EditVehicleScreen(
+                        viewModel = viewModel,
+                        onBack = { vehicleRoute = VehicleRoute.DETAILS },
+                        onSaved = { vehicleRoute = VehicleRoute.DETAILS },
                         modifier = routedModifier,
                     )
                 }

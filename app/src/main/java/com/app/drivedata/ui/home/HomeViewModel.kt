@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.app.drivedata.DriveDataApplication
-import com.app.drivedata.R
+import com.app.drivedata.metrics.ActiveVehicleCollection
 import com.app.drivedata.metrics.MetricsCollectionState
 import com.app.drivedata.metrics.model.MetricsSnapshot
 import com.app.drivedata.obd.model.EcuStatus
@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.stateIn
 
 data class HomeUiState(
     val vehicleName: String = "",
+    val hasVehicle: Boolean = false,
     val connection: ObdConnectionState = ObdConnectionState.Disconnected,
     val isConnected: Boolean = false,
     val isCollecting: Boolean = false,
@@ -51,7 +52,7 @@ data class HomeUiState(
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
-    private val vehicleName: String,
+    activeVehicle: Flow<ActiveVehicleCollection?>,
     connectionState: StateFlow<ObdConnectionState>,
     collectionState: StateFlow<MetricsCollectionState>,
     pendingCount: Flow<Int>,
@@ -81,9 +82,15 @@ class HomeViewModel(
         }
 
     val uiState: StateFlow<HomeUiState> =
-        combine(coreState, internetAvailable, syncStatus) { core, internet, sync ->
+        combine(
+            coreState,
+            internetAvailable,
+            syncStatus,
+            activeVehicle,
+        ) { core, internet, sync, vehicle ->
             HomeUiState(
-                vehicleName = vehicleName,
+                vehicleName = vehicle?.displayName.orEmpty(),
+                hasVehicle = vehicle != null,
                 connection = core.connection,
                 isConnected = core.connection.isEcuVerified(),
                 isCollecting = core.collection.isCollecting,
@@ -103,7 +110,7 @@ class HomeViewModel(
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
-            initialValue = HomeUiState(vehicleName = vehicleName),
+            initialValue = HomeUiState(),
         )
 
     fun syncNow() {
@@ -127,7 +134,7 @@ class HomeViewModel(
                     val container = application.container
                     val owner = container.authSession.signedInUser
                     HomeViewModel(
-                        vehicleName = application.getString(R.string.home_default_vehicle),
+                        activeVehicle = container.activeVehicleCollection,
                         connectionState = container.obdConnectionManager.state,
                         collectionState = container.metricsCollectionController.state,
                         pendingCount = owner.flatMapLatest { user ->

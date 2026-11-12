@@ -10,7 +10,6 @@ import com.app.drivedata.metrics.MetricDefinition
 import com.app.drivedata.metrics.MetricsCollectionController
 import com.app.drivedata.metrics.defaultMetricCatalog
 import com.app.drivedata.obd.ObdConnectionManager
-import com.app.drivedata.obd.model.ConnectionFailure
 import com.app.drivedata.obd.model.DiscoveryFailure
 import com.app.drivedata.obd.model.DiscoveryStage
 import com.app.drivedata.obd.model.EcuStatus
@@ -25,6 +24,8 @@ import com.app.drivedata.ui.vehicles.FormStep
 import com.app.drivedata.ui.vehicles.SetupFailure
 import com.app.drivedata.ui.vehicles.SetupStage
 import com.app.drivedata.ui.vehicles.VehicleSetupState
+import com.app.drivedata.ui.vehicles.setupStage
+import com.app.drivedata.ui.vehicles.toSetupFailure
 import com.app.drivedata.vehicle.ConnectionConfigErrors
 import com.app.drivedata.vehicle.ConnectionConfigValidation
 import com.app.drivedata.vehicle.ConnectionConfigValidator
@@ -380,7 +381,7 @@ class AddVehicleViewModel(
                         (connectionManager.state.value as? ObdConnectionState.Failed)?.reason
                     _state.value =
                         VehicleSetupState.Failed(
-                            stage = failure.stage(),
+                            stage = failure.setupStage(),
                             failure = failure.toSetupFailure(),
                         )
                     return@launch
@@ -618,38 +619,6 @@ class AddVehicleViewModel(
         lastForm = form
         _state.value = form
     }
-
-    private fun ConnectionFailure?.stage(): SetupStage =
-        when (this) {
-            ConnectionFailure.MISSING_PROMPT,
-            ConnectionFailure.ADAPTER_INITIALIZATION,
-            -> SetupStage.INITIALIZE
-
-            ConnectionFailure.ECU_NO_RESPONSE -> SetupStage.ECU_TEST
-            else -> SetupStage.CONNECT
-        }
-
-    private fun ConnectionFailure?.toSetupFailure(): SetupFailure =
-        when (this) {
-            ConnectionFailure.INVALID_CONFIGURATION -> SetupFailure.INVALID_CONFIGURATION
-            ConnectionFailure.CONNECT_TIMEOUT -> SetupFailure.CONNECT_TIMEOUT
-            ConnectionFailure.TRANSPORT -> SetupFailure.TRANSPORT
-            ConnectionFailure.MISSING_PROMPT -> SetupFailure.MISSING_PROMPT
-            ConnectionFailure.ADAPTER_INITIALIZATION -> SetupFailure.ADAPTER_INITIALIZATION
-            ConnectionFailure.ECU_NO_RESPONSE -> SetupFailure.ECU_NO_DATA
-            ConnectionFailure.UNKNOWN, null -> SetupFailure.UNKNOWN
-        }
-
-    private fun DiscoveryFailure.toSetupFailure(): SetupFailure =
-        when (this) {
-            DiscoveryFailure.ECU_NO_DATA -> SetupFailure.ECU_NO_DATA
-            DiscoveryFailure.SERVICE_MISMATCH -> SetupFailure.SERVICE_MISMATCH
-            DiscoveryFailure.TRUNCATED -> SetupFailure.TRUNCATED
-            DiscoveryFailure.MALFORMED -> SetupFailure.MALFORMED_RESPONSE
-            DiscoveryFailure.TIMEOUT -> SetupFailure.TIMEOUT
-            DiscoveryFailure.CONNECTION_LOST -> SetupFailure.CONNECTION_LOST
-            DiscoveryFailure.UNKNOWN -> SetupFailure.UNKNOWN
-        }
 
     private fun ObdConnectionState.configOrNull(): ObdWifiConfig? =
         when (this) {

@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,7 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +48,7 @@ import com.app.drivedata.ui.theme.HomeSurface
 import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
 import com.app.drivedata.ui.vehicles.components.VehicleCard
+import com.app.drivedata.ui.vehicles.components.VehicleErrorBanner
 import com.app.drivedata.ui.vehicles.components.VehicleHeader
 
 @Composable
@@ -57,6 +56,7 @@ fun VehicleListScreen(
     viewModel: VehicleListViewModel,
     onBack: () -> Unit,
     onAddVehicle: () -> Unit,
+    onOpenVehicle: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -132,6 +132,7 @@ fun VehicleListScreen(
                     state.vehicles.forEach { vehicle ->
                         VehicleCard(
                             vehicle = vehicle,
+                            onOpenDetails = { onOpenVehicle(vehicle.id) },
                             onSelectActive = { viewModel.selectActive(vehicle.id) },
                             onRemove = { pendingRemovalId = vehicle.id },
                         )
@@ -230,35 +231,6 @@ private fun EmptyVehicles(onAddVehicle: () -> Unit) {
                 Spacer(Modifier.size(8.dp))
                 Text(stringResource(R.string.vehicle_add))
             }
-        }
-    }
-}
-
-@Composable
-private fun VehicleErrorBanner(message: String, onDismiss: () -> Unit) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(HomeRed.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Filled.Warning,
-            contentDescription = null,
-            tint = HomeRed,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(Modifier.size(10.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodySmall,
-            color = HomeTextPrimary,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onDismiss) {
-            Text(stringResource(R.string.action_close))
         }
     }
 }

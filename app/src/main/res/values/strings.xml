@@ -74,7 +74,8 @@
     <string name="tab_connection">Conexão</string>
     <string name="tab_metrics">Leituras</string>
 
-    <string name="home_default_vehicle">Chevrolet S10</string>
+    <string name="home_no_active_vehicle">Nenhum veículo ativo</string>
+    <string name="home_vehicle_add_hint">Toque para escolher ou cadastrar um veículo</string>
     <string name="home_connected">Veículo conectado</string>
     <string name="home_disconnected">Veículo desconectado</string>
     <string name="home_collecting">Coleta ativa</string>
@@ -124,6 +125,8 @@
     <string name="metrics_resume_collection">Iniciar coleta</string>
     <string name="metrics_min_max">min %1$s \u2022 máx %2$s</string>
     <string name="metrics_offline_hint">Conecte o ELM327 para receber os parâmetros do veículo.</string>
+    <string name="metrics_no_active_vehicle">Nenhum veículo ativo</string>
+    <string name="metrics_collection_unavailable">Descubra os parâmetros do veículo para iniciar a coleta.</string>
     <string name="metrics_disclaimer">Nem todos os veículos suportam todos os parâmetros. Os dados podem variar conforme o modelo e ano do veículo.</string>
     <string name="metrics_unavailable">Indisponível</string>
     <string name="metrics_error_storage">Não foi possível salvar as leituras neste dispositivo. Os valores ao vivo continuam sendo exibidos, mas não serão enviados.</string>
@@ -183,6 +186,37 @@
     <string name="vehicle_year_plate_value">%1$d \u2022 %2$s</string>
     <string name="vehicle_error_delete">Não foi possível remover o veículo. Tente novamente.</string>
     <string name="vehicle_error_activate">Não foi possível definir o veículo ativo. Tente novamente.</string>
+    <string name="vehicle_details_open">Detalhes</string>
+    <string name="vehicle_details_title">Detalhes do veículo</string>
+    <string name="vehicle_details_subtitle">Informações, adaptador e parâmetros</string>
+    <string name="vehicle_details_info">Veículo</string>
+    <string name="vehicle_details_adapter">Adaptador</string>
+    <string name="vehicle_details_capabilities">Parâmetros suportados</string>
+    <string name="vehicle_details_actions">Ações</string>
+    <string name="vehicle_details_nickname">Apelido</string>
+    <string name="vehicle_details_year">Ano</string>
+    <string name="vehicle_details_plate">Placa</string>
+    <string name="vehicle_details_last_connection">Última conexão com o adaptador</string>
+    <string name="vehicle_details_no_capabilities">Nenhum parâmetro descoberto para este veículo. Conecte o adaptador e redescubra os parâmetros suportados.</string>
+    <string name="vehicle_details_not_found">Não foi possível carregar este veículo.</string>
+    <string name="vehicle_details_edit">Editar dados</string>
+    <string name="vehicle_details_rediscovering">Redescobrindo parâmetros</string>
+    <string name="vehicle_details_connecting">Conectando ao adaptador\u2026</string>
+    <string name="vehicle_details_discovering">Descobrindo parâmetros suportados\u2026</string>
+    <string name="vehicle_details_discovery_progress">Faixa 0x%1$02X \u2022 %2$d parâmetros encontrados</string>
+    <string name="vehicle_details_not_configured">Este veículo não tem um adaptador configurado. Edite os dados para informar o endereço.</string>
+    <string name="vehicle_details_pid_update_failed">Não foi possível atualizar o parâmetro. Tente novamente.</string>
+    <string name="vehicle_details_delete_failed">Não foi possível remover o veículo. Tente novamente.</string>
+    <string name="vehicle_details_activate_failed">Não foi possível definir o veículo ativo. Tente novamente.</string>
+    <string name="vehicle_details_rediscovery_failed">Não foi possível redescobrir os parâmetros. Os valores anteriores foram mantidos. %1$s</string>
+
+    <string name="edit_vehicle_title">Editar veículo</string>
+    <string name="edit_vehicle_subtitle">Atualize os dados do veículo e do adaptador</string>
+    <string name="edit_vehicle_section_vehicle">Dados do veículo</string>
+    <string name="edit_vehicle_section_adapter">Adaptador ELM327</string>
+    <string name="edit_vehicle_load_failed">Não foi possível carregar os dados do veículo.</string>
+    <string name="edit_vehicle_save_failed">Não foi possível salvar as alterações. Tente novamente.</string>
+    <string name="vehicle_save">Salvar alterações</string>
 
     <string name="add_vehicle_title">Novo veículo</string>
     <string name="add_vehicle_step_vehicle">Veículo</string>

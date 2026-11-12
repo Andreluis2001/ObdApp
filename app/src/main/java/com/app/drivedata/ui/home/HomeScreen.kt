@@ -105,7 +105,11 @@ private fun HomeContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         ConnectionHeader(isConnected = state.isConnected)
-        VehicleCard(vehicleName = state.vehicleName, onClick = onOpenVehicles)
+        VehicleCard(
+            vehicleName = state.vehicleName,
+            hasVehicle = state.hasVehicle,
+            onClick = onOpenVehicles,
+        )
         CollectionCard(state = state, onSyncNow = onSyncNow)
 
         SectionTitle(stringResource(R.string.home_main_parameters))
@@ -137,7 +141,11 @@ private fun ConnectionHeader(isConnected: Boolean) {
 }
 
 @Composable
-private fun VehicleCard(vehicleName: String, onClick: () -> Unit) {
+private fun VehicleCard(
+    vehicleName: String,
+    hasVehicle: Boolean,
+    onClick: () -> Unit,
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = HomeSurface),
         shape = RoundedCornerShape(20.dp),
@@ -163,13 +171,31 @@ private fun VehicleCard(vehicleName: String, onClick: () -> Unit) {
                 )
             }
             Spacer(Modifier.width(12.dp))
-            Text(
-                text = vehicleName,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = HomeTextPrimary,
+            Column(
                 modifier = Modifier.weight(1f),
-            )
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text =
+                        if (hasVehicle) {
+                            vehicleName
+                        } else {
+                            stringResource(R.string.home_no_active_vehicle)
+                        },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = HomeTextPrimary,
+                    maxLines = 1,
+                )
+                if (!hasVehicle) {
+                    Text(
+                        text = stringResource(R.string.home_vehicle_add_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = HomeTextSecondary,
+                        maxLines = 1,
+                    )
+                }
+            }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,

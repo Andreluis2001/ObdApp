@@ -1,6 +1,8 @@
 package com.app.drivedata.ui.home
 
+import com.app.drivedata.metrics.ActiveVehicleCollection
 import com.app.drivedata.metrics.MetricsCollectionState
+import com.app.drivedata.metrics.defaultMetricCatalog
 import com.app.drivedata.metrics.model.MetricId
 import com.app.drivedata.metrics.model.MetricReading
 import com.app.drivedata.metrics.model.MetricsSnapshot
@@ -13,6 +15,7 @@ import com.app.drivedata.sync.SyncError
 import com.app.drivedata.sync.SyncStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -67,6 +70,17 @@ class HomeViewModelTest {
         }
 
     @Test
+    fun exposesEmptyVehicleState_whenThereIsNoActiveVehicle() =
+        runTest {
+            val viewModel = homeViewModel(activeVehicle = flowOf(null))
+
+            val state = viewModel.awaitState { it.pendingCount == 12 }
+
+            assertFalse(state.hasVehicle)
+            assertEquals("", state.vehicleName)
+        }
+
+    @Test
     fun reportsDisconnectedWhenTheEcuIsNotVerified() =
         runTest {
             val viewModel =
@@ -82,12 +96,15 @@ class HomeViewModelTest {
         }
 
     private fun homeViewModel(
-        connection: MutableStateFlow<ObdConnectionState>,
-        collection: MutableStateFlow<MetricsCollectionState>,
+        connection: MutableStateFlow<ObdConnectionState> =
+            MutableStateFlow(ObdConnectionState.Disconnected),
+        collection: MutableStateFlow<MetricsCollectionState> =
+            MutableStateFlow(MetricsCollectionState()),
         syncStatus: MutableStateFlow<SyncStatus> = MutableStateFlow(SyncStatus()),
+        activeVehicle: Flow<ActiveVehicleCollection?> = flowOf(activeVehicle()),
     ): HomeViewModel =
         HomeViewModel(
-            vehicleName = "Chevrolet S10",
+            activeVehicle = activeVehicle,
             connectionState = connection,
             collectionState = collection,
             pendingCount = flowOf(12),
@@ -104,6 +121,16 @@ class HomeViewModelTest {
 
     private fun connected(ecuStatus: EcuStatus): ObdConnectionState.Connected =
         ObdConnectionState.Connected(ObdWifiConfig("192.168.0.10", 35_000), "CAN", ecuStatus)
+
+    private fun activeVehicle(): ActiveVehicleCollection =
+        ActiveVehicleCollection(
+            vehicleId = "vehicle-1",
+            displayName = "Chevrolet S10",
+            host = "192.168.0.10",
+            port = 35_000,
+            hasDiscovery = true,
+            catalog = defaultMetricCatalog,
+        )
 
     private fun snapshot(timestampMillis: Long): MetricsSnapshot =
         MetricsSnapshot(

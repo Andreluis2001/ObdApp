@@ -41,7 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -60,15 +59,16 @@ import com.app.drivedata.ui.theme.HomeTextSecondary
 import com.app.drivedata.ui.vehicles.AddVehicleEvent
 import com.app.drivedata.ui.vehicles.DiscoveredPid
 import com.app.drivedata.ui.vehicles.FormStep
-import com.app.drivedata.ui.vehicles.SetupFailure
 import com.app.drivedata.ui.vehicles.SetupStage
 import com.app.drivedata.ui.vehicles.VehicleSetupState
+import com.app.drivedata.ui.vehicles.components.VehicleDetailsForm
 import com.app.drivedata.ui.vehicles.components.VehicleHeader
+import com.app.drivedata.ui.vehicles.labelRes
+import com.app.drivedata.ui.vehicles.messageRes
 import com.app.drivedata.vehicle.ConnectionConfigErrors
 import com.app.drivedata.vehicle.ConnectionDraft
 import com.app.drivedata.vehicle.VehicleDetailsDraft
 import com.app.drivedata.vehicle.VehicleDetailsErrors
-import com.app.drivedata.vehicle.VehicleDetailsValidator
 
 @Composable
 fun AddVehicleScreen(
@@ -252,88 +252,14 @@ private fun VehicleFormStep(
     onContinue: () -> Unit,
 ) {
     SectionCard(title = stringResource(R.string.add_vehicle_step_vehicle)) {
-        OutlinedTextField(
-            value = details.make,
-            onValueChange = onMakeChange,
-            singleLine = true,
-            label = { Text(stringResource(R.string.vehicle_make_label)) },
-            isError = errors.make,
-            supportingText =
-                if (errors.make) {
-                    { Text(stringResource(R.string.vehicle_error_make)) }
-                } else {
-                    null
-                },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = details.model,
-            onValueChange = onModelChange,
-            singleLine = true,
-            label = { Text(stringResource(R.string.vehicle_model_label)) },
-            isError = errors.model,
-            supportingText =
-                if (errors.model) {
-                    { Text(stringResource(R.string.vehicle_error_model)) }
-                } else {
-                    null
-                },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = details.year,
-            onValueChange = onYearChange,
-            singleLine = true,
-            label = { Text(stringResource(R.string.vehicle_year_label)) },
-            isError = errors.year,
-            supportingText =
-                if (errors.year) {
-                    { Text(stringResource(R.string.vehicle_error_year)) }
-                } else {
-                    null
-                },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = details.licensePlate,
-            onValueChange = onPlateChange,
-            singleLine = true,
-            label = { Text(stringResource(R.string.vehicle_plate_label)) },
-            isError = errors.licensePlate,
-            supportingText =
-                if (errors.licensePlate) {
-                    { Text(stringResource(R.string.vehicle_error_plate)) }
-                } else {
-                    null
-                },
-            keyboardOptions =
-                KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    capitalization = KeyboardCapitalization.Characters,
-                ),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = details.nickname,
-            onValueChange = onNicknameChange,
-            singleLine = true,
-            label = { Text(stringResource(R.string.vehicle_nickname_label)) },
-            isError = errors.nickname,
-            supportingText =
-                if (errors.nickname) {
-                    {
-                        Text(
-                            stringResource(
-                                R.string.vehicle_error_nickname,
-                                VehicleDetailsValidator.MAX_NICKNAME_LENGTH,
-                            ),
-                        )
-                    }
-                } else {
-                    null
-                },
-            modifier = Modifier.fillMaxWidth(),
+        VehicleDetailsForm(
+            details = details,
+            errors = errors,
+            onMakeChange = onMakeChange,
+            onModelChange = onModelChange,
+            onYearChange = onYearChange,
+            onPlateChange = onPlateChange,
+            onNicknameChange = onNicknameChange,
         )
         PrimaryButton(
             label = stringResource(R.string.add_vehicle_continue),
@@ -686,29 +612,4 @@ private fun VehicleSetupState.progressStep(): Int =
             if (stage == SetupStage.SAVE || stage == SetupStage.DISCOVERY) 2 else 1
 
         VehicleSetupState.Saving -> 2
-    }
-
-private fun SetupStage.labelRes(): Int =
-    when (this) {
-        SetupStage.CONNECT -> R.string.add_vehicle_stage_connect
-        SetupStage.INITIALIZE -> R.string.add_vehicle_stage_initialize
-        SetupStage.ECU_TEST -> R.string.add_vehicle_stage_ecu
-        SetupStage.DISCOVERY -> R.string.add_vehicle_stage_discovery
-        SetupStage.SAVE -> R.string.add_vehicle_stage_save
-    }
-
-private fun SetupFailure.messageRes(): Int =
-    when (this) {
-        SetupFailure.INVALID_CONFIGURATION -> R.string.failure_invalid_configuration
-        SetupFailure.CONNECT_TIMEOUT -> R.string.failure_connect_timeout
-        SetupFailure.TRANSPORT -> R.string.failure_transport
-        SetupFailure.MISSING_PROMPT -> R.string.failure_missing_prompt
-        SetupFailure.ADAPTER_INITIALIZATION -> R.string.failure_adapter_initialization
-        SetupFailure.ECU_NO_DATA -> R.string.failure_ecu_no_data
-        SetupFailure.MALFORMED_RESPONSE -> R.string.failure_malformed_response
-        SetupFailure.SERVICE_MISMATCH, SetupFailure.TRUNCATED -> R.string.failure_invalid_bitmap
-        SetupFailure.TIMEOUT -> R.string.failure_discovery_timeout
-        SetupFailure.CONNECTION_LOST -> R.string.failure_discovery_connection_lost
-        SetupFailure.SAVE_FAILED -> R.string.failure_save
-        SetupFailure.UNKNOWN -> R.string.failure_unknown
     }
