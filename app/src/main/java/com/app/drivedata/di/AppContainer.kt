@@ -10,11 +10,13 @@ import com.app.drivedata.metrics.MetricsRepository
 import com.app.drivedata.metrics.ObdMetricsCollector
 import com.app.drivedata.metrics.dao.DriveDataDatabase
 import com.app.drivedata.obd.ObdConnectionManager
+import com.app.drivedata.obd.PidDiscoveryCoordinator
 import com.app.drivedata.obd.transport.WifiNetworkLookup
 import com.app.drivedata.settings.AppSettingsRepository
 import com.app.drivedata.storage.StorageStatsProvider
 import com.app.drivedata.sync.SyncScheduler
 import com.app.drivedata.sync.TelemetrySyncEngine
+import com.app.drivedata.vehicle.VehicleRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,6 +28,7 @@ class AppContainer(context: Context) {
 
     val settingsRepository = AppSettingsRepository(appContext)
     val obdConnectionManager = ObdConnectionManager(WifiNetworkLookup(appContext))
+    val pidDiscoveryCoordinator = PidDiscoveryCoordinator(obdConnectionManager)
     val metricsCollector = ObdMetricsCollector(obdConnectionManager)
     val connectivityObserver = ConnectivityObserver(appContext)
 
@@ -33,6 +36,7 @@ class AppContainer(context: Context) {
     val metricsRepository = MetricsRepository(database.metricRecordDao())
     val usersRepository = UserRepository(database.userDao())
     val authSession = AuthSession()
+    val vehicleRepository = VehicleRepository(database.vehicleDao(), authSession)
 
     private val apiClient = ApiClient()
     val telemetrySyncEngine = TelemetrySyncEngine(database.metricRecordDao(), apiClient.telemetryApi)

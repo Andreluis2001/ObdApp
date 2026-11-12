@@ -627,6 +627,7 @@ private fun ObdConnectionState.statusLabel(): String =
         is ObdConnectionState.Connected -> when (ecuStatus) {
             EcuStatus.VERIFIED -> stringResource(R.string.connection_status_connected)
             EcuStatus.NO_COMMUNICATION -> stringResource(R.string.connection_status_no_ecu)
+            EcuStatus.INVALID_RESPONSE -> stringResource(R.string.connection_status_invalid_response)
             EcuStatus.VERIFYING, EcuStatus.UNKNOWN -> stringResource(R.string.connection_status_verifying)
         }
 
@@ -638,6 +639,7 @@ private fun ObdConnectionState.statusColor(): Color =
         is ObdConnectionState.Connected -> when (ecuStatus) {
             EcuStatus.VERIFIED -> HomeGreen
             EcuStatus.NO_COMMUNICATION -> HomeOrange
+            EcuStatus.INVALID_RESPONSE -> HomeRed
             EcuStatus.VERIFYING, EcuStatus.UNKNOWN -> HomeOrange
         }
 
@@ -658,7 +660,9 @@ private fun ObdConnectionState.configOrNull(): ObdWifiConfig? =
 private fun ConnectionFailure.messageRes(): Int =
     when (this) {
         ConnectionFailure.INVALID_CONFIGURATION -> R.string.failure_invalid_configuration
+        ConnectionFailure.CONNECT_TIMEOUT -> R.string.failure_connect_timeout
         ConnectionFailure.TRANSPORT -> R.string.failure_transport
+        ConnectionFailure.MISSING_PROMPT -> R.string.failure_missing_prompt
         ConnectionFailure.ADAPTER_INITIALIZATION -> R.string.failure_adapter_initialization
         ConnectionFailure.ECU_NO_RESPONSE -> R.string.failure_ecu_no_response
         ConnectionFailure.UNKNOWN -> R.string.failure_unknown

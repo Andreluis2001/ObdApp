@@ -21,6 +21,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.net.SocketTimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 
 class ObdConnectionManager(
@@ -64,11 +65,12 @@ class ObdConnectionManager(
                         transport = activeTransport
                         AppLog.d("OBD socket open, initializing ELM327")
 
-                        val activeConnection = ObdDeviceConnection(streams.input, streams.output)
+                        val promptTracker = PromptTrackingInputStream(streams.input)
+                        val activeConnection = ObdDeviceConnection(promptTracker, streams.output)
                         connection = activeConnection
 
                         _state.value = ObdConnectionState.Initializing(config)
-                        initializeAdapter(activeConnection)
+                        initializeAdapter(activeConnection, promptTracker)
                         val protocol = describeProtocol(activeConnection)
                         val ecuStatus = verifyEcuCommunication(activeConnection)
 
@@ -76,6 +78,14 @@ class ObdConnectionManager(
                         _state.value = ObdConnectionState.Connected(config, protocol, ecuStatus)
                     } catch (error: CancellationException) {
                         throw error
+                    } catch (error: MissingPromptException) {
+                        AppLog.e("OBD adapter did not send the expected ELM327 prompt", error)
+                        closeInternal()
+                        _state.value = ObdConnectionState.Failed(config, ConnectionFailure.MISSING_PROMPT)
+                    } catch (error: SocketTimeoutException) {
+                        AppLog.e("OBD connection timed out", error)
+                        closeInternal()
+                        _state.value = ObdConnectionState.Failed(config, ConnectionFailure.CONNECT_TIMEOUT)
                     } catch (error: BadResponseException) {
                         AppLog.e("OBD adapter rejected the initialization commands", error)
                         closeInternal()
@@ -113,36 +123,54 @@ class ObdConnectionManager(
     }
 
     suspend fun runCommand(command: ObdCommand): ObdResponse? =
-        lifecycleLock.withLock {
-            val active = connection ?: run {
-                AppLog.w("OBD command '${command.rawCommand}' skipped: no active connection")
-                return@withLock null
-            }
-            try {
-                active.runWithSearchingRetry(command).also { response ->
-                    AppLog.d(
-                        "OBD '${command.rawCommand}' -> raw='${AppLog.raw(response.rawResponse.value)}' " +
-                            "value='${response.formattedValue}'",
-                    )
-                }
-            } catch (e: IOException) {
-                AppLog.e("OBD command '${command.rawCommand}' failed with an I/O error", e)
-                if (!intentionallyClosing.get()) {
-                    markTransportFailure()
-                }
-                throw e
-            }
-        }
+        lifecycleLock.withLock { runCommandLocked(command) }
+
+    /**
+     * Runs [block] while holding the session lock, so a discovery sequence cannot interleave with
+     * the 1 Hz metrics poll.
+     *
+     * The block must issue commands through the supplied runner; calling [runCommand] or
+     * [disconnect] from inside would try to re-acquire the non-reentrant lock.
+     */
+    suspend fun <T> withExclusiveSession(
+        block: suspend (runner: suspend (ObdCommand) -> ObdResponse?) -> T,
+    ): T = lifecycleLock.withLock { block { command -> runCommandLocked(command) } }
 
     suspend fun reportEcuNoResponse() =
         lifecycleLock.withLock {
             val current = _state.value
-            if (current is ObdConnectionState.Connected && current.ecuStatus != EcuStatus.NO_COMMUNICATION) {
+            val alreadyReported =
+                current is ObdConnectionState.Connected &&
+                    (current.ecuStatus == EcuStatus.NO_COMMUNICATION ||
+                        current.ecuStatus == EcuStatus.INVALID_RESPONSE)
+            if (current is ObdConnectionState.Connected && !alreadyReported) {
                 AppLog.w("OBD ECU stopped answering while collecting metrics")
                 closeInternal()
                 _state.value = ObdConnectionState.Failed(current.config, ConnectionFailure.ECU_NO_RESPONSE)
             }
         }
+
+    private suspend fun runCommandLocked(command: ObdCommand): ObdResponse? {
+        val active =
+            connection ?: run {
+                AppLog.w("OBD command '${command.rawCommand}' skipped: no active connection")
+                return null
+            }
+        return try {
+            active.runWithSearchingRetry(command).also { response ->
+                AppLog.d(
+                    "OBD '${command.rawCommand}' -> raw='${AppLog.raw(response.rawResponse.value)}' " +
+                        "value='${response.formattedValue}'",
+                )
+            }
+        } catch (e: IOException) {
+            AppLog.e("OBD command '${command.rawCommand}' failed with an I/O error", e)
+            if (!intentionallyClosing.get()) {
+                markTransportFailure()
+            }
+            throw e
+        }
+    }
 
     private fun markTransportFailure() {
         val config =

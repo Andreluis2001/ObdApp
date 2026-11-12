@@ -8,10 +8,21 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.app.drivedata.auth.dao.UserDao
 import com.app.drivedata.auth.dao.UserEntity
+import com.app.drivedata.vehicle.dao.VehicleDao
+import com.app.drivedata.vehicle.entity.Elm327ConnectionEntity
+import com.app.drivedata.vehicle.entity.SupportedPidEntity
+import com.app.drivedata.vehicle.entity.VehicleEntity
 
 @Database(
-    entities = [MetricRecordEntity::class, MetricReadingEntity::class, UserEntity::class],
-    version = 3,
+    entities = [
+        MetricRecordEntity::class,
+        MetricReadingEntity::class,
+        UserEntity::class,
+        VehicleEntity::class,
+        Elm327ConnectionEntity::class,
+        SupportedPidEntity::class,
+    ],
+    version = 4,
     exportSchema = true,
 )
 abstract class DriveDataDatabase : RoomDatabase() {
@@ -19,6 +30,8 @@ abstract class DriveDataDatabase : RoomDatabase() {
     abstract fun metricRecordDao(): MetricRecordDao
 
     abstract fun userDao(): UserDao
+
+    abstract fun vehicleDao(): VehicleDao
 
     companion object {
         const val DATABASE_NAME = "drivedata.db"
@@ -81,12 +94,67 @@ abstract class DriveDataDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Adds the vehicle domain: vehicles, their ELM327 connection settings and discovered PIDs.
+         *
+         * Existing telemetry and user rows are untouched.
+         */
+        internal val MIGRATION_3_4 =
+            object : Migration(3, 4) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `vehicles` (" +
+                            "`id` TEXT NOT NULL, " +
+                            "`owner_username` TEXT NOT NULL, " +
+                            "`nickname` TEXT, " +
+                            "`make` TEXT NOT NULL, " +
+                            "`model` TEXT NOT NULL, " +
+                            "`year` INTEGER, " +
+                            "`license_plate` TEXT, " +
+                            "`is_active` INTEGER NOT NULL DEFAULT 0, " +
+                            "`created_at_millis` INTEGER NOT NULL, " +
+                            "`updated_at_millis` INTEGER NOT NULL, " +
+                            "PRIMARY KEY(`id`))",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_vehicles_owner_active` " +
+                            "ON `vehicles` (`owner_username`, `is_active`)",
+                    )
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `elm327_connections` (" +
+                            "`vehicle_id` TEXT NOT NULL, " +
+                            "`host` TEXT NOT NULL, " +
+                            "`port` INTEGER NOT NULL, " +
+                            "`last_connection_at_millis` INTEGER, " +
+                            "`last_ecu_communication_at_millis` INTEGER, " +
+                            "`connection_status` TEXT NOT NULL, " +
+                            "PRIMARY KEY(`vehicle_id`), " +
+                            "FOREIGN KEY(`vehicle_id`) REFERENCES `vehicles`(`id`) " +
+                            "ON UPDATE NO ACTION ON DELETE CASCADE)",
+                    )
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `supported_pids` (" +
+                            "`vehicle_id` TEXT NOT NULL, " +
+                            "`pid` INTEGER NOT NULL, " +
+                            "`discovered_at_millis` INTEGER NOT NULL, " +
+                            "`enabled_for_collection` INTEGER NOT NULL DEFAULT 1, " +
+                            "PRIMARY KEY(`vehicle_id`, `pid`), " +
+                            "FOREIGN KEY(`vehicle_id`) REFERENCES `vehicles`(`id`) " +
+                            "ON UPDATE NO ACTION ON DELETE CASCADE)",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_supported_pids_vehicle_id` " +
+                            "ON `supported_pids` (`vehicle_id`)",
+                    )
+                }
+            }
+
         fun build(context: Context): DriveDataDatabase =
             Room.databaseBuilder(
                 context.applicationContext,
                 DriveDataDatabase::class.java,
                 DATABASE_NAME,
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
     }
 }

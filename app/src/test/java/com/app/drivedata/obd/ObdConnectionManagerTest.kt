@@ -14,6 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.net.SocketTimeoutException
 
 /**
  * Drives [ObdConnectionManager] against an in-memory transport whose input stream replays the
@@ -146,6 +147,94 @@ class ObdConnectionManagerTest {
 
             assertTrue(manager.state.value is ObdConnectionState.Disconnected)
             assertNull(manager.runCommand(RPMCommand()))
+        }
+
+    @Test
+    fun connect_reportsConnectTimeout_whenTheSocketTimesOut() =
+        runBlocking {
+            val manager =
+                ObdConnectionManager(
+                    transportFactory = {
+                        FakeObdTransport("", onOpen = { throw SocketTimeoutException("connect timed out") })
+                    },
+                )
+
+            manager.connect(ObdWifiConfig(host = "192.168.0.10", port = 35000))
+
+            val state = manager.state.value
+            assertTrue("expected Failed but was $state", state is ObdConnectionState.Failed)
+            assertEquals(
+                ConnectionFailure.CONNECT_TIMEOUT,
+                (state as ObdConnectionState.Failed).reason,
+            )
+        }
+
+    @Test
+    fun connect_reportsMissingPrompt_whenTheAdapterNeverSendsIt() =
+        runBlocking {
+            // No '>' prompt: the transport keeps reading until its retry budget is exhausted.
+            val transport = FakeObdTransport("ELM327 v1.5\r\r")
+            val manager = ObdConnectionManager(transportFactory = { transport })
+
+            manager.connect(ObdWifiConfig(host = "192.168.0.10", port = 35000))
+
+            val state = manager.state.value
+            assertTrue("expected Failed but was $state", state is ObdConnectionState.Failed)
+            assertEquals(
+                ConnectionFailure.MISSING_PROMPT,
+                (state as ObdConnectionState.Failed).reason,
+            )
+        }
+
+    @Test
+    fun connect_reportsInvalidResponse_whenTheBitmapIsTruncated() =
+        runBlocking {
+            val transport =
+                FakeObdTransport(
+                    elmScript(
+                        "OK", "OK", "OK", "OK", "OK", "OK", "OK",
+                        "ISO 15765-4 (CAN 11/500)",
+                        "41 00 BE1F",
+                    ),
+                )
+            val manager = ObdConnectionManager(transportFactory = { transport })
+
+            manager.connect(ObdWifiConfig(host = "192.168.0.10", port = 35000))
+
+            val state = manager.state.value
+            assertTrue("expected Connected but was $state", state is ObdConnectionState.Connected)
+            assertEquals(EcuStatus.INVALID_RESPONSE, (state as ObdConnectionState.Connected).ecuStatus)
+        }
+
+    @Test
+    fun withExclusiveSession_runsCommandsThroughTheLockedRunner() =
+        runBlocking {
+            val transport =
+                FakeObdTransport(
+                    elmScript(
+                        "OK", "OK", "OK", "OK", "OK", "OK", "OK",
+                        "ISO 15765-4 (CAN 11/500)",
+                        "41 00 BE 3E B8 13",
+                        "41 0C 1A F8",
+                        "41 0C 10 A4",
+                    ),
+                )
+            val manager = ObdConnectionManager(transportFactory = { transport })
+            manager.connect(ObdWifiConfig(host = "192.168.0.10", port = 35000))
+
+            val response = manager.withExclusiveSession { runner -> runner(RPMCommand()) }
+
+            assertEquals(1065.0, response?.value?.toDouble() ?: Double.NaN, 0.01)
+        }
+
+    @Test
+    fun withExclusiveSession_returnsNullWithoutAnActiveConnection() =
+        runBlocking {
+            val manager = ObdConnectionManager(transportFactory = { FakeObdTransport("") })
+
+            val response = manager.withExclusiveSession { runner -> runner(RPMCommand()) }
+
+            assertNull(response)
         }
 }
 

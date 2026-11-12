@@ -43,15 +43,17 @@ class MetricsCollectionController(
     
     private var collectionSession = 0
 
-    private var stoppedByUser = false
+    @Volatile private var stoppedByUser = false
+
+    @Volatile private var maintenancePaused = false
 
     init {
         scope.launch {
             connectionState.collect { connection ->
                 if (connection.isCollectible()) {
-                    if (!stoppedByUser) startCollection()
+                    if (!stoppedByUser && !maintenancePaused) startCollection()
                 } else {
-                    stoppedByUser = false
+                    if (!maintenancePaused) stoppedByUser = false
                     stopInternal()
                     if (_state.value.snapshot != null) {
                         _state.value = _state.value.copy(snapshot = null)
@@ -59,6 +61,22 @@ class MetricsCollectionController(
                 }
             }
         }
+    }
+
+    /**
+     * Stops collection before an adapter setup/rediscovery sequence without marking it as a
+     * user-initiated stop. The connection-state collector will not restart collection until
+     * [resumeAfterMaintenance] is called.
+     */
+    fun pauseForMaintenance() {
+        maintenancePaused = true
+        stopInternal()
+    }
+
+    /** Allows collection to restart after a setup sequence, unless the user stopped it manually. */
+    fun resumeAfterMaintenance() {
+        maintenancePaused = false
+        if (!stoppedByUser) startCollection()
     }
 
     fun startCollection() {

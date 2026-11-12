@@ -574,6 +574,7 @@ private fun ObdConnectionState.statusLabel(): String =
         is ObdConnectionState.Connected -> when (ecuStatus) {
             EcuStatus.VERIFIED -> stringResource(R.string.metrics_status_verified)
             EcuStatus.NO_COMMUNICATION -> stringResource(R.string.metrics_status_ecu_no_response)
+            EcuStatus.INVALID_RESPONSE -> stringResource(R.string.metrics_status_invalid_response)
             EcuStatus.VERIFYING, EcuStatus.UNKNOWN -> stringResource(R.string.metrics_status_verifying)
         }
         is ObdConnectionState.Failed -> stringResource(R.string.metrics_status_failed)
@@ -586,6 +587,7 @@ private fun ObdConnectionState.statusColor(): Color =
             when (ecuStatus) {
                 EcuStatus.VERIFIED -> HomeGreen
                 EcuStatus.NO_COMMUNICATION -> HomeRed
+                EcuStatus.INVALID_RESPONSE -> HomeRed
                 EcuStatus.VERIFYING, EcuStatus.UNKNOWN -> HomeTextSecondary
             }
         is ObdConnectionState.Failed -> HomeRed

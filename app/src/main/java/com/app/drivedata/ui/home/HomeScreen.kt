@@ -23,7 +23,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Inbox
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
@@ -76,12 +75,14 @@ import com.app.drivedata.ui.theme.HomeTextSecondary
 fun HomeScreen(
     viewModel: HomeViewModel,
     onSeeAllReadings: () -> Unit,
+    onOpenVehicles: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     HomeContent(
         state = state,
         onSeeAllReadings = onSeeAllReadings,
+        onOpenVehicles = onOpenVehicles,
         onSyncNow = viewModel::syncNow,
         modifier = modifier,
     )
@@ -91,6 +92,7 @@ fun HomeScreen(
 private fun HomeContent(
     state: HomeUiState,
     onSeeAllReadings: () -> Unit,
+    onOpenVehicles: () -> Unit,
     onSyncNow: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -103,7 +105,7 @@ private fun HomeContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         ConnectionHeader(isConnected = state.isConnected)
-        VehicleCard(vehicleName = state.vehicleName)
+        VehicleCard(vehicleName = state.vehicleName, onClick = onOpenVehicles)
         CollectionCard(state = state, onSyncNow = onSyncNow)
 
         SectionTitle(stringResource(R.string.home_main_parameters))
@@ -135,7 +137,7 @@ private fun ConnectionHeader(isConnected: Boolean) {
 }
 
 @Composable
-private fun VehicleCard(vehicleName: String) {
+private fun VehicleCard(vehicleName: String, onClick: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = HomeSurface),
         shape = RoundedCornerShape(20.dp),
@@ -143,6 +145,7 @@ private fun VehicleCard(vehicleName: String) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable(onClick = onClick)
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -168,7 +171,7 @@ private fun VehicleCard(vehicleName: String) {
                 modifier = Modifier.weight(1f),
             )
             Icon(
-                imageVector = Icons.Filled.KeyboardArrowDown,
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = HomeTextSecondary,
             )

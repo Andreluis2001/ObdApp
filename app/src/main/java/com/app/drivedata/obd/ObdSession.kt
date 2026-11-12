@@ -4,6 +4,7 @@ import com.app.drivedata.logging.AppLog
 import com.app.drivedata.obd.model.EcuStatus
 import com.github.eltonvs.obd.command.AdaptiveTimingMode
 import com.github.eltonvs.obd.command.BadResponseException
+import com.github.eltonvs.obd.command.NoDataException
 import com.github.eltonvs.obd.command.ObdCommand
 import com.github.eltonvs.obd.command.ObdProtocols
 import com.github.eltonvs.obd.command.ObdResponse
@@ -16,14 +17,20 @@ import com.github.eltonvs.obd.command.at.SetEchoCommand
 import com.github.eltonvs.obd.command.at.SetHeadersCommand
 import com.github.eltonvs.obd.command.at.SetLineFeedCommand
 import com.github.eltonvs.obd.command.at.SetSpacesCommand
-import com.github.eltonvs.obd.command.control.AvailablePIDsCommand
 import com.github.eltonvs.obd.command.engine.RPMCommand
 import com.github.eltonvs.obd.connection.ObdDeviceConnection
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
 
-internal suspend fun initializeAdapter(connection: ObdDeviceConnection) {
+internal suspend fun initializeAdapter(
+    connection: ObdDeviceConnection,
+    promptTracker: PromptTrackingInputStream,
+) {
+    val promptsBeforeReset = promptTracker.promptCount
     runLogged(connection, ResetAdapterCommand())
+    if (promptTracker.promptCount == promptsBeforeReset) {
+        throw MissingPromptException()
+    }
     runLogged(connection, SetEchoCommand(Switcher.OFF))
     runLogged(connection, SetLineFeedCommand(Switcher.OFF))
     runLogged(connection, SetSpacesCommand(Switcher.OFF))
@@ -43,25 +50,44 @@ internal suspend fun describeProtocol(connection: ObdDeviceConnection): String? 
     }
 
 internal suspend fun verifyEcuCommunication(connection: ObdDeviceConnection): EcuStatus {
-    val ecuAnswered =
+    val bitmapRaw =
         try {
             runLogged(
                 connection,
-                AvailablePIDsCommand(AvailablePIDsCommand.AvailablePIDsRanges.PIDS_01_TO_20),
+                RawAvailablePidsCommand(ECU_TEST_PID_BASE),
                 retryOnSearching = true,
             )
+                .rawResponse
                 .value
-                .isNotBlank()
-        } catch (_: BadResponseException) {
-            false
         } catch (error: CancellationException) {
             throw error
-        } catch (_: IllegalArgumentException) {
-            true
+        } catch (error: IOException) {
+            throw error
+        } catch (error: NoDataException) {
+            AppLog.w("OBD ECU did not answer the supported-PIDs request")
+            return EcuStatus.NO_COMMUNICATION
+        } catch (error: BadResponseException) {
+            AppLog.w("OBD ECU answered the supported-PIDs request with an unusable response", error)
+            return EcuStatus.INVALID_RESPONSE
+        } catch (error: IllegalArgumentException) {
+            AppLog.w("OBD ECU answered the supported-PIDs request with a malformed bitmap", error)
+            return EcuStatus.INVALID_RESPONSE
         }
-    if (!ecuAnswered) {
-        AppLog.w("OBD ECU did not answer the supported-PIDs request")
-        return EcuStatus.NO_COMMUNICATION
+
+    when (val decoded = PidBitmap.decode(bitmapRaw, ECU_TEST_PID_BASE)) {
+        is BitmapResult.Ok -> Unit
+        is BitmapResult.Failure ->
+            return when (decoded.reason) {
+                BitmapFailure.NO_DATA -> {
+                    AppLog.w("OBD ECU did not answer the supported-PIDs request")
+                    EcuStatus.NO_COMMUNICATION
+                }
+
+                else -> {
+                    AppLog.w("OBD ECU returned an invalid supported-PIDs bitmap (${decoded.reason})")
+                    EcuStatus.INVALID_RESPONSE
+                }
+            }
     }
 
     try {
@@ -94,3 +120,8 @@ private suspend fun runLogged(
     )
     return response
 }
+
+/** The adapter accepted the TCP connection but never sent the ELM327 `>` prompt. */
+internal class MissingPromptException : IOException("ELM327 prompt was not received")
+
+private const val ECU_TEST_PID_BASE = 0x00

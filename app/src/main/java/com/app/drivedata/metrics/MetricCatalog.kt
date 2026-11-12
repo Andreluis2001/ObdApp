@@ -13,18 +13,20 @@ import com.github.eltonvs.obd.command.temperature.EngineCoolantTemperatureComman
 
 data class MetricDefinition(
     val id: MetricId,
+    /** OBD PID byte advertised by the supported-PIDs bitmap (e.g. 0x0C for RPM). */
+    val pid: Int,
     val unit: String,
     val commandFactory: () -> ObdCommand,
 )
 
 val defaultMetricCatalog: List<MetricDefinition> =
     listOf(
-        MetricDefinition(MetricId.RPM, "RPM") { RPMCommand() },
-        MetricDefinition(MetricId.SPEED, "km/h") { SpeedCommand() },
-        MetricDefinition(MetricId.COOLANT_TEMPERATURE, "\u00B0C") { EngineCoolantTemperatureCommand() },
-        MetricDefinition(MetricId.ENGINE_LOAD, "%") { LoadCommand() },
-        MetricDefinition(MetricId.THROTTLE_POSITION, "%") { ThrottlePositionCommand() },
-        MetricDefinition(MetricId.INTAKE_MANIFOLD_PRESSURE, "kPa") { IntakeManifoldPressureCommand() },
-        MetricDefinition(MetricId.MAF, "g/s") { MassAirFlowCommand() },
-        MetricDefinition(MetricId.FUEL_LEVEL, "%") { FuelLevelCommand() },
+        MetricDefinition(MetricId.RPM, 0x0C, "RPM") { RPMCommand() },
+        MetricDefinition(MetricId.SPEED, 0x0D, "km/h") { SpeedCommand() },
+        MetricDefinition(MetricId.COOLANT_TEMPERATURE, 0x05, "\u00B0C") { EngineCoolantTemperatureCommand() },
+        MetricDefinition(MetricId.ENGINE_LOAD, 0x04, "%") { LoadCommand() },
+        MetricDefinition(MetricId.THROTTLE_POSITION, 0x11, "%") { ThrottlePositionCommand() },
+        MetricDefinition(MetricId.INTAKE_MANIFOLD_PRESSURE, 0x0B, "kPa") { IntakeManifoldPressureCommand() },
+        MetricDefinition(MetricId.MAF, 0x10, "g/s") { MassAirFlowCommand() },
+        MetricDefinition(MetricId.FUEL_LEVEL, 0x2F, "%") { FuelLevelCommand() },
     )
