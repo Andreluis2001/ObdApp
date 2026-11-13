@@ -49,9 +49,15 @@
     <string name="connection_test_subtitle">Verificar se o veículo responde</string>
 
     <string name="connection_pids">PIDs suportados</string>
-    <string name="connection_pids_subtitle">Ver quais parâmetros estão disponíveis</string>
+    <string name="connection_pids_subtitle">Parâmetros descobertos no veículo ativo</string>
     <string name="connection_pids_dialog_title">PIDs suportados</string>
-    <string name="connection_pids_dialog_hint">O app consulta estes parâmetros. A disponibilidade varia conforme o modelo e ano do veículo.</string>
+    <string name="connection_pids_dialog_hint">Estes parâmetros foram descobertos na ECU do veículo ativo. A disponibilidade pode variar conforme o modelo e ano.</string>
+    <string name="connection_pids_dialog_active_vehicle">Veículo ativo: %1$s</string>
+    <string name="connection_pids_dialog_discovered_at">Descobertos em %1$s</string>
+    <string name="connection_pids_dialog_no_vehicle">Nenhum veículo ativo. Cadastre ou selecione um veículo em Meus veículos.</string>
+    <string name="connection_pids_dialog_no_discovery">Os parâmetros de %1$s ainda não foram descobertos. Abra os detalhes do veículo e redescubra os parâmetros.</string>
+    <string name="connection_pids_dialog_no_catalog_pids">O veículo ativo não informou parâmetros compatíveis com o app.</string>
+    <string name="connection_pids_dialog_collection_disabled">Coleta desativada</string>
 
     <string name="connection_protocol">Protocolo</string>
     <string name="connection_protocol_auto">Automático</string>

@@ -58,12 +58,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.drivedata.R
-import com.app.drivedata.metrics.defaultMetricCatalog
 import com.app.drivedata.obd.model.ConnectionFailure
 import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.obd.model.ObdWifiConfig
 import com.app.drivedata.ui.common.LightStatusBarIcons
+import com.app.drivedata.ui.common.formatDateTime
 import com.app.drivedata.ui.metrics.presentation
 import com.app.drivedata.ui.theme.HomeBackground
 import com.app.drivedata.ui.theme.HomeBlue
@@ -195,7 +195,11 @@ private fun ConnectionContent(
                 },
             )
 
-        ConnectionDialog.PIDS -> SupportedPidsDialog(onDismiss = { activeDialog = null })
+        ConnectionDialog.PIDS ->
+            SupportedPidsDialog(
+                summary = state.supportedPids,
+                onDismiss = { activeDialog = null },
+            )
 
         ConnectionDialog.PROTOCOL ->
             ProtocolDialog(
@@ -503,7 +507,13 @@ private fun PairDeviceDialog(
 }
 
 @Composable
-private fun SupportedPidsDialog(onDismiss: () -> Unit) {
+private fun SupportedPidsDialog(
+    summary: SupportedPidsSummary,
+    onDismiss: () -> Unit,
+) {
+    val vehicleName = summary.vehicleName
+    val discoveredAt = summary.discoveredAtMillis
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.connection_pids_dialog_title)) },
@@ -517,27 +527,42 @@ private fun SupportedPidsDialog(onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                     color = HomeTextSecondary,
                 )
-                defaultMetricCatalog.forEach { definition ->
-                    val presentation = definition.id.presentation()
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = presentation.icon,
-                            contentDescription = null,
-                            tint = presentation.tint,
-                            modifier = Modifier.size(18.dp),
+                when {
+                    vehicleName == null ->
+                        EmptyDialogMessage(R.string.connection_pids_dialog_no_vehicle)
+
+                    discoveredAt == null ->
+                        EmptyDialogMessage(
+                            R.string.connection_pids_dialog_no_discovery,
+                            vehicleName,
                         )
-                        Spacer(Modifier.width(10.dp))
+
+                    summary.pids.isEmpty() ->
+                        EmptyDialogMessage(R.string.connection_pids_dialog_no_catalog_pids)
+
+                    else -> {
                         Text(
-                            text = stringResource(presentation.labelRes),
+                            text =
+                                stringResource(
+                                    R.string.connection_pids_dialog_active_vehicle,
+                                    vehicleName,
+                                ),
                             style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
                             color = HomeTextPrimary,
-                            modifier = Modifier.weight(1f),
                         )
                         Text(
-                            text = stringResource(presentation.unitRes),
+                            text =
+                                stringResource(
+                                    R.string.connection_pids_dialog_discovered_at,
+                                    formatDateTime(discoveredAt),
+                                ),
                             style = MaterialTheme.typography.labelSmall,
                             color = HomeTextSecondary,
                         )
+                        summary.pids.forEach { item ->
+                            SupportedPidRow(item)
+                        }
                     }
                 }
             }
@@ -548,6 +573,54 @@ private fun SupportedPidsDialog(onDismiss: () -> Unit) {
             }
         },
     )
+}
+
+@Composable
+private fun EmptyDialogMessage(
+    textRes: Int,
+    vararg formatArgs: Any,
+) {
+    Text(
+        text = stringResource(textRes, *formatArgs),
+        style = MaterialTheme.typography.bodySmall,
+        color = HomeTextSecondary,
+    )
+}
+
+@Composable
+private fun SupportedPidRow(item: SupportedPidItem) {
+    val presentation = item.definition.id.presentation()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = presentation.icon,
+            contentDescription = null,
+            tint = presentation.tint,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(presentation.labelRes),
+                style = MaterialTheme.typography.bodySmall,
+                color = HomeTextPrimary,
+            )
+            Text(
+                text =
+                    stringResource(presentation.unitRes) +
+                        " · " +
+                        stringResource(R.string.add_vehicle_pid_value, item.definition.pid),
+                style = MaterialTheme.typography.labelSmall,
+                color = HomeTextSecondary,
+            )
+        }
+        if (!item.enabledForCollection) {
+            Text(
+                text = stringResource(R.string.connection_pids_dialog_collection_disabled),
+                style = MaterialTheme.typography.labelSmall,
+                color = HomeOrange,
+            )
+        }
+    }
 }
 
 @Composable

@@ -10,6 +10,8 @@ import com.app.drivedata.obd.ObdConnectionManager
 import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.obd.model.ObdWifiConfig
 import com.app.drivedata.settings.AppSettingsRepository
+import com.app.drivedata.vehicle.model.Vehicle
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +24,7 @@ data class ConnectionUiState(
     val port: String = "",
     val connection: ObdConnectionState = ObdConnectionState.Disconnected,
     val isBusy: Boolean = false,
+    val supportedPids: SupportedPidsSummary = SupportedPidsSummary(),
 ) {
     val isConfigValid: Boolean
         get() {
@@ -33,19 +36,21 @@ data class ConnectionUiState(
 class ConnectionViewModel(
     private val settingsRepository: AppSettingsRepository,
     private val obdConnectionManager: ObdConnectionManager,
+    activeVehicle: Flow<Vehicle?>,
 ) : ViewModel() {
 
     private val host = MutableStateFlow("")
     private val port = MutableStateFlow("")
 
     val uiState: StateFlow<ConnectionUiState> =
-        combine(host, port, obdConnectionManager.state) { hostValue, portValue, connection ->
+        combine(host, port, obdConnectionManager.state, activeVehicle) { hostValue, portValue, connection, vehicle ->
             ConnectionUiState(
                 host = hostValue,
                 port = portValue,
                 connection = connection,
                 isBusy = connection is ObdConnectionState.Connecting ||
                     connection is ObdConnectionState.Initializing,
+                supportedPids = vehicle.toSupportedPidsSummary(),
             )
         }.stateIn(
             scope = viewModelScope,
@@ -94,6 +99,7 @@ class ConnectionViewModel(
                     ConnectionViewModel(
                         settingsRepository = application.container.settingsRepository,
                         obdConnectionManager = application.container.obdConnectionManager,
+                        activeVehicle = application.container.vehicleRepository.observeActiveVehicle(),
                     )
                 }
             }
