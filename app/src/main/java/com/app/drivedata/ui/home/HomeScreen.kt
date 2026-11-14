@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,8 +22,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
@@ -30,16 +33,24 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -47,6 +58,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.drivedata.R
@@ -55,6 +67,7 @@ import com.app.drivedata.metrics.model.MetricsSnapshot
 import com.app.drivedata.metrics.model.ReadingValue
 import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.sync.SyncError
+import com.app.drivedata.ui.common.LightStatusBarIcons
 import com.app.drivedata.ui.common.formatBytes
 import com.app.drivedata.ui.common.formatClockTime
 import com.app.drivedata.ui.common.formatDateTime
@@ -70,19 +83,26 @@ import com.app.drivedata.ui.theme.HomeRed
 import com.app.drivedata.ui.theme.HomeSurface
 import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
+import com.app.drivedata.ui.theme.LoginBackgroundTop
+import com.app.drivedata.vehicle.model.Vehicle
 
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
     onSeeAllReadings: () -> Unit,
     onOpenVehicles: () -> Unit,
+    onSelectVehicle: (String) -> Unit,
+    onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LightStatusBarIcons()
     HomeContent(
         state = state,
         onSeeAllReadings = onSeeAllReadings,
         onOpenVehicles = onOpenVehicles,
+        onSelectVehicle = onSelectVehicle,
+        onSignOut = onSignOut,
         onSyncNow = viewModel::syncNow,
         modifier = modifier,
     )
@@ -93,88 +113,122 @@ private fun HomeContent(
     state: HomeUiState,
     onSeeAllReadings: () -> Unit,
     onOpenVehicles: () -> Unit,
+    onSelectVehicle: (String) -> Unit,
+    onSignOut: () -> Unit,
     onSyncNow: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(HomeBackground)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .background(HomeBackground),
     ) {
-        ConnectionHeader(isConnected = state.isConnected)
-        VehicleCard(
+        HomeHeader(
+            isConnected = state.isConnected,
             vehicleName = state.vehicleName,
             hasVehicle = state.hasVehicle,
-            onClick = onOpenVehicles,
+            vehicles = state.vehicles,
+            onSelectVehicle = onSelectVehicle,
+            onManageVehicles = onOpenVehicles,
+            onSignOut = onSignOut,
         )
-        CollectionCard(state = state, onSyncNow = onSyncNow)
-
-        SectionTitle(stringResource(R.string.home_main_parameters))
-        MainParameters(snapshot = state.snapshot)
-        SeeAllRow(onClick = onSeeAllReadings)
-
-        SectionTitle(stringResource(R.string.home_connection_status))
-        ConnectionStatusCards(state = state)
-
-        Spacer(Modifier.height(8.dp))
-    }
-}
-
-@Composable
-private fun ConnectionHeader(isConnected: Boolean) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .background(if (isConnected) HomeGreen else HomeTextSecondary, CircleShape),
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = stringResource(if (isConnected) R.string.home_connected else R.string.home_disconnected),
-            style = MaterialTheme.typography.bodyMedium,
-            color = HomeTextPrimary,
-        )
-    }
-}
-
-@Composable
-private fun VehicleCard(
-    vehicleName: String,
-    hasVehicle: Boolean,
-    onClick: () -> Unit,
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = HomeSurface),
-        shape = RoundedCornerShape(20.dp),
-    ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            CollectionCard(state = state, onSyncNow = onSyncNow)
+
+            SectionTitle(stringResource(R.string.home_main_parameters))
+            MainParameters(snapshot = state.snapshot)
+            SeeAllRow(onClick = onSeeAllReadings)
+
+            SectionTitle(stringResource(R.string.home_connection_status))
+            ConnectionStatusCards(state = state)
+
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun HomeHeader(
+    isConnected: Boolean,
+    vehicleName: String,
+    hasVehicle: Boolean,
+    vehicles: List<Vehicle>,
+    onSelectVehicle: (String) -> Unit,
+    onManageVehicles: () -> Unit,
+    onSignOut: () -> Unit,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    val orderedVehicles = vehicles.sortedByDescending { it.isActive }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(LoginBackgroundTop)
+            .statusBarsPadding()
+            .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .background(HomeBlue.copy(alpha = 0.12f), CircleShape),
-                contentAlignment = Alignment.Center,
+                    .size(9.dp)
+                    .background(if (isConnected) HomeGreen else HomeTextSecondary, CircleShape),
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = stringResource(
+                    if (isConnected) R.string.home_connected else R.string.home_disconnected,
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(
+                onClick = onSignOut,
+                colors = ButtonDefaults.textButtonColors(contentColor = HomeRed),
             ) {
-                Icon(
-                    imageVector = Icons.Filled.DirectionsCar,
-                    contentDescription = null,
-                    tint = HomeBlue,
-                    modifier = Modifier.size(24.dp),
+                Text(
+                    text = stringResource(R.string.action_sign_out),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
-            Spacer(Modifier.width(12.dp))
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+        }
+        Box {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(HomeSurface)
+                    .clickable {
+                        if (vehicles.isEmpty()) {
+                            onManageVehicles()
+                        } else {
+                            menuExpanded = true
+                        }
+                    }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(HomeBlue.copy(alpha = 0.12f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.DirectionsCar,
+                        contentDescription = null,
+                        tint = HomeBlue,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
                 Text(
                     text =
                         if (hasVehicle) {
@@ -184,23 +238,77 @@ private fun VehicleCard(
                         },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = HomeTextPrimary,
+                    color = if (hasVehicle) HomeTextPrimary else HomeTextSecondary,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
-                if (!hasVehicle) {
-                    Text(
-                        text = stringResource(R.string.home_vehicle_add_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = HomeTextSecondary,
-                        maxLines = 1,
+                Icon(
+                    imageVector = Icons.Filled.KeyboardArrowDown,
+                    contentDescription = stringResource(R.string.home_select_vehicle),
+                    tint = HomeTextSecondary,
+                )
+            }
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+                modifier = Modifier.fillMaxWidth(0.92f),
+                shape = RoundedCornerShape(16.dp),
+                containerColor = HomeSurface,
+            ) {
+                orderedVehicles.forEach { vehicle ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = vehicle.displayName,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontWeight = if (vehicle.isActive) FontWeight.SemiBold else FontWeight.Normal,
+                                color = HomeTextPrimary,
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onSelectVehicle(vehicle.id)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.DirectionsCar,
+                                contentDescription = null,
+                                tint = if (vehicle.isActive) HomeBlue else HomeTextSecondary,
+                            )
+                        },
+                        trailingIcon = if (vehicle.isActive) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = HomeBlue,
+                                )
+                            }
+                        } else {
+                            null
+                        },
                     )
                 }
+                if (vehicles.isNotEmpty()) {
+                    HorizontalDivider(color = HomeDivider)
+                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.vehicles_title), color = HomeTextPrimary) },
+                    onClick = {
+                        menuExpanded = false
+                        onManageVehicles()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.DirectionsCar,
+                            contentDescription = null,
+                            tint = HomeTextSecondary,
+                        )
+                    },
+                )
             }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = HomeTextSecondary,
-            )
         }
     }
 }

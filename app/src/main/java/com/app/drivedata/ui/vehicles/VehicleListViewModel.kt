@@ -9,6 +9,7 @@ import com.app.drivedata.DriveDataApplication
 import com.app.drivedata.obd.ObdConnectionManager
 import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.obd.model.ObdWifiConfig
+import com.app.drivedata.vehicle.ActiveVehicleSwitcher
 import com.app.drivedata.vehicle.VehicleRepository
 import com.app.drivedata.vehicle.model.Vehicle
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,7 @@ enum class VehicleListError {
 
 class VehicleListViewModel(
     private val vehicleRepository: VehicleRepository,
+    private val vehicleSwitcher: ActiveVehicleSwitcher,
     private val connectionManager: ObdConnectionManager,
 ) : ViewModel() {
 
@@ -51,24 +53,14 @@ class VehicleListViewModel(
 
     fun selectActive(vehicleId: String) {
         viewModelScope.launch {
-            val target = uiState.value.vehicles.firstOrNull { it.id == vehicleId }
-            if (target != null && isDisconnectedFrom(target)) {
-                connectionManager.disconnect()
-            }
-            if (vehicleRepository.setActive(vehicleId)) {
+            val target = uiState.value.vehicles.firstOrNull { it.id == vehicleId } ?: return@launch
+            if (vehicleSwitcher.switchTo(target)) {
                 error.value = null
             } else {
                 error.value = VehicleListError.ACTIVATE_FAILED
             }
         }
     }
-
-    /**
-     * The active vehicle's adapter may differ from the one currently linked. Do not keep a live
-     * link to another vehicle's adapter after switching, matching the no-auto-connect rule.
-     */
-    private fun isDisconnectedFrom(target: Vehicle): Boolean =
-        connectionManager.state.value !is ObdConnectionState.Disconnected && !isConnectedTo(target)
 
     fun delete(vehicle: Vehicle) {
         viewModelScope.launch {
@@ -103,6 +95,7 @@ class VehicleListViewModel(
                     val container = application.container
                     VehicleListViewModel(
                         vehicleRepository = container.vehicleRepository,
+                        vehicleSwitcher = container.activeVehicleSwitcher,
                         connectionManager = container.obdConnectionManager,
                     )
                 }

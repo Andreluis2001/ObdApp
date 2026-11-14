@@ -11,7 +11,7 @@
     <string name="login_hide_password">Ocultar senha</string>
     <string name="login_error_invalid_credentials">Usuário ou senha incorretos.</string>
     <string name="login_error_unexpected">Não foi possível entrar. Tente novamente.</string>
-    <string name="action_sign_out">Sign out</string>
+    <string name="action_sign_out">Sair</string>
     <string name="action_back">Voltar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_close">Fechar</string>
@@ -77,11 +77,13 @@
     <string name="failure_unknown">Ocorreu um erro inesperado ao conectar.</string>
 
     <string name="tab_home">Início</string>
+    <string name="tab_vehicles">Veículos</string>
     <string name="tab_connection">Conexão</string>
     <string name="tab_metrics">Leituras</string>
 
     <string name="home_no_active_vehicle">Nenhum veículo ativo</string>
     <string name="home_vehicle_add_hint">Toque para escolher ou cadastrar um veículo</string>
+    <string name="home_select_vehicle">Selecionar veículo</string>
     <string name="home_connected">Veículo conectado</string>
     <string name="home_disconnected">Veículo desconectado</string>
     <string name="home_collecting">Coleta ativa</string>

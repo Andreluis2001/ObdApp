@@ -14,6 +14,7 @@ import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.storage.StorageStats
 import com.app.drivedata.sync.SyncError
 import com.app.drivedata.sync.SyncStatus
+import com.app.drivedata.vehicle.model.Vehicle
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,10 +23,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 data class HomeUiState(
     val vehicleName: String = "",
     val hasVehicle: Boolean = false,
+    val vehicles: List<Vehicle> = emptyList(),
     val connection: ObdConnectionState = ObdConnectionState.Disconnected,
     val isConnected: Boolean = false,
     val isCollecting: Boolean = false,
@@ -53,6 +56,7 @@ data class HomeUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     activeVehicle: Flow<ActiveVehicleCollection?>,
+    vehicles: Flow<List<Vehicle>>,
     connectionState: StateFlow<ObdConnectionState>,
     collectionState: StateFlow<MetricsCollectionState>,
     pendingCount: Flow<Int>,
@@ -62,6 +66,7 @@ class HomeViewModel(
     syncStatus: StateFlow<SyncStatus>,
     storageStats: Flow<StorageStats>,
     private val onSyncNow: () -> Unit,
+    private val activateVehicle: suspend (Vehicle) -> Boolean = { true },
 ) : ViewModel() {
 
     private val coreState: Flow<CoreState> =
@@ -87,10 +92,12 @@ class HomeViewModel(
             internetAvailable,
             syncStatus,
             activeVehicle,
-        ) { core, internet, sync, vehicle ->
+            vehicles,
+        ) { core, internet, sync, vehicle, allVehicles ->
             HomeUiState(
                 vehicleName = vehicle?.displayName.orEmpty(),
                 hasVehicle = vehicle != null,
+                vehicles = allVehicles,
                 connection = core.connection,
                 isConnected = core.connection.isEcuVerified(),
                 isCollecting = core.collection.isCollecting,
@@ -117,6 +124,11 @@ class HomeViewModel(
         onSyncNow()
     }
 
+    fun selectVehicle(vehicleId: String) {
+        val vehicle = uiState.value.vehicles.firstOrNull { it.id == vehicleId } ?: return
+        viewModelScope.launch { activateVehicle(vehicle) }
+    }
+
     private data class CoreState(
         val connection: ObdConnectionState,
         val collection: MetricsCollectionState,
@@ -135,6 +147,7 @@ class HomeViewModel(
                     val owner = container.authSession.signedInUser
                     HomeViewModel(
                         activeVehicle = container.activeVehicleCollection,
+                        vehicles = container.vehicleRepository.observeVehicles(),
                         connectionState = container.obdConnectionManager.state,
                         collectionState = container.metricsCollectionController.state,
                         pendingCount = owner.flatMapLatest { user ->
@@ -154,6 +167,9 @@ class HomeViewModel(
                         syncStatus = container.telemetrySyncEngine.status,
                         storageStats = container.storageStatsProvider.observe(),
                         onSyncNow = container.syncScheduler::syncNow,
+                        activateVehicle = { vehicle ->
+                            container.activeVehicleSwitcher.switchTo(vehicle)
+                        },
                     )
                 }
             }

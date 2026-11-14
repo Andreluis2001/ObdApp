@@ -17,23 +17,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,7 +38,6 @@ import com.app.drivedata.R
 import com.app.drivedata.ui.common.LightStatusBarIcons
 import com.app.drivedata.ui.theme.HomeBackground
 import com.app.drivedata.ui.theme.HomeBlue
-import com.app.drivedata.ui.theme.HomeRed
 import com.app.drivedata.ui.theme.HomeSurface
 import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
@@ -57,11 +51,10 @@ fun VehicleListScreen(
     onBack: () -> Unit,
     onAddVehicle: () -> Unit,
     onOpenVehicle: (String) -> Unit,
+    onEditVehicle: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var pendingRemovalId by rememberSaveable { mutableStateOf<String?>(null) }
-    val pendingRemoval = state.vehicles.firstOrNull { it.id == pendingRemovalId }
 
     LightStatusBarIcons()
 
@@ -75,6 +68,15 @@ fun VehicleListScreen(
             title = stringResource(R.string.vehicles_title),
             subtitle = stringResource(R.string.vehicles_subtitle),
             onBack = onBack,
+            actions = {
+                IconButton(onClick = onAddVehicle) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = stringResource(R.string.vehicle_add),
+                        tint = Color.White,
+                    )
+                }
+            },
         )
 
         Column(
@@ -104,77 +106,25 @@ fun VehicleListScreen(
                         CircularProgressIndicator(color = HomeBlue)
                     }
 
-                state.vehicles.isEmpty() -> EmptyVehicles(onAddVehicle = onAddVehicle)
+                state.vehicles.isEmpty() -> EmptyVehicles()
 
-                else -> {
-                    Button(
-                        onClick = onAddVehicle,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = HomeBlue),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Spacer(Modifier.size(8.dp))
-                        Text(
-                            text = stringResource(R.string.vehicle_add),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
-
+                else ->
                     state.vehicles.forEach { vehicle ->
                         VehicleCard(
                             vehicle = vehicle,
                             onOpenDetails = { onOpenVehicle(vehicle.id) },
-                            onSelectActive = { viewModel.selectActive(vehicle.id) },
-                            onRemove = { pendingRemovalId = vehicle.id },
+                            onEdit = { onEditVehicle(vehicle.id) },
                         )
                     }
-                }
             }
 
             Spacer(Modifier.height(8.dp))
         }
     }
-
-    pendingRemoval?.let { vehicle ->
-        AlertDialog(
-            onDismissRequest = { pendingRemovalId = null },
-            title = { Text(stringResource(R.string.vehicle_remove_title)) },
-            text = {
-                Text(stringResource(R.string.vehicle_remove_message, vehicle.displayName))
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        pendingRemovalId = null
-                        viewModel.delete(vehicle)
-                    },
-                ) {
-                    Text(
-                        text = stringResource(R.string.vehicle_remove_confirm),
-                        color = HomeRed,
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingRemovalId = null }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            },
-        )
-    }
 }
 
 @Composable
-private fun EmptyVehicles(onAddVehicle: () -> Unit) {
+private fun EmptyVehicles() {
     Card(
         colors = CardDefaults.cardColors(containerColor = HomeSurface),
         shape = RoundedCornerShape(20.dp),
@@ -214,23 +164,6 @@ private fun EmptyVehicles(onAddVehicle: () -> Unit) {
                 color = HomeTextSecondary,
                 textAlign = TextAlign.Center,
             )
-            Button(
-                onClick = onAddVehicle,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = HomeBlue),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(Modifier.size(8.dp))
-                Text(stringResource(R.string.vehicle_add))
-            }
         }
     }
 }

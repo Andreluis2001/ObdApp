@@ -18,6 +18,7 @@ import com.app.drivedata.settings.AppSettingsRepository
 import com.app.drivedata.storage.StorageStatsProvider
 import com.app.drivedata.sync.SyncScheduler
 import com.app.drivedata.sync.TelemetrySyncEngine
+import com.app.drivedata.vehicle.ActiveVehicleSwitcher
 import com.app.drivedata.vehicle.VehicleRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +44,7 @@ class AppContainer(context: Context) {
     val usersRepository = UserRepository(database.userDao())
     val authSession = AuthSession()
     val vehicleRepository = VehicleRepository(database.vehicleDao(), authSession)
+    val activeVehicleSwitcher = ActiveVehicleSwitcher(vehicleRepository, obdConnectionManager)
 
     val activeVehicleCollection: StateFlow<ActiveVehicleCollection?> =
         vehicleRepository

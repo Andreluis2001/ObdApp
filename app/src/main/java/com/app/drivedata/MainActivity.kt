@@ -5,28 +5,38 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Wifi
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.app.drivedata.ui.connection.ConnectionScreen
@@ -38,6 +48,11 @@ import com.app.drivedata.ui.login.LoginViewModel
 import com.app.drivedata.ui.metrics.MetricsScreen
 import com.app.drivedata.ui.metrics.MetricsViewModel
 import com.app.drivedata.ui.theme.DriveDataTheme
+import com.app.drivedata.ui.theme.HomeBackground
+import com.app.drivedata.ui.theme.HomeBlue
+import com.app.drivedata.ui.theme.HomeDivider
+import com.app.drivedata.ui.theme.HomeSurface
+import com.app.drivedata.ui.theme.HomeTextSecondary
 import com.app.drivedata.ui.vehicles.VehicleListScreen
 import com.app.drivedata.ui.vehicles.VehicleListViewModel
 import com.app.drivedata.ui.vehicles.add.AddVehicleScreen
@@ -60,11 +75,15 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class AppDestination { HOME, CONNECTION, METRICS }
+private enum class AppDestination(val labelRes: Int) {
+    HOME(R.string.tab_home),
+    VEHICLES(R.string.tab_vehicles),
+    CONNECTION(R.string.tab_connection),
+    METRICS(R.string.tab_metrics),
+}
 
-private enum class VehicleRoute { LIST, ADD, DETAILS, EDIT }
+private enum class VehicleRoute { ADD, DETAILS, EDIT }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DriveDataApp() {
     val application = LocalContext.current.applicationContext as DriveDataApplication
@@ -91,6 +110,7 @@ private fun DriveDataApp() {
     var vehicleRoute by rememberSaveable { mutableStateOf<VehicleRoute?>(null) }
     var selectedVehicleId by rememberSaveable { mutableStateOf<String?>(null) }
     var addVehicleSession by rememberSaveable { mutableStateOf(0) }
+    var editReturnsToDetails by rememberSaveable { mutableStateOf(true) }
     val addVehicleSessionKey = rememberSaveable { UUID.randomUUID().toString() }
     val addVehicleViewModel: AddVehicleViewModel? =
         if (vehicleRoute == VehicleRoute.ADD) {
@@ -123,108 +143,54 @@ private fun DriveDataApp() {
 
     BackHandler(
         enabled =
-            vehicleRoute == VehicleRoute.LIST ||
-                vehicleRoute == VehicleRoute.DETAILS ||
+            vehicleRoute == VehicleRoute.DETAILS ||
                 vehicleRoute == VehicleRoute.EDIT,
     ) {
         when (vehicleRoute) {
-            VehicleRoute.LIST -> {
-                selectedVehicleId = null
-                vehicleRoute = null
-            }
-
             VehicleRoute.DETAILS -> {
                 vehicleDetailsViewModel?.onScreenDisposed()
-                vehicleRoute = VehicleRoute.LIST
+                selectedVehicleId = null
+                vehicleRoute = null
+                destination = AppDestination.VEHICLES
             }
 
-            VehicleRoute.EDIT -> vehicleRoute = VehicleRoute.DETAILS
+            VehicleRoute.EDIT ->
+                if (editReturnsToDetails) {
+                    vehicleRoute = VehicleRoute.DETAILS
+                } else {
+                    selectedVehicleId = null
+                    vehicleRoute = null
+                    destination = AppDestination.VEHICLES
+                }
+
             else -> Unit
         }
     }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        topBar = {
-            if (vehicleRoute == null && destination == AppDestination.HOME) {
-                TopAppBar(
-                    title = { Text(stringResource(R.string.app_name)) },
-                    actions = {
-                        TextButton(onClick = authSession::signOut) {
-                            Text(stringResource(R.string.action_sign_out))
-                        }
-                    },
-                )
-            }
-        },
+        containerColor = HomeBackground,
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = destination == AppDestination.HOME,
-                    onClick = {
-                        addVehicleViewModel?.onScreenDisposed()
-                        vehicleDetailsViewModel?.onScreenDisposed()
-                        selectedVehicleId = null
-                        vehicleRoute = null
-                        destination = AppDestination.HOME
-                    },
-                    icon = { Icon(Icons.Filled.Home, contentDescription = null) },
-                    label = { Text(stringResource(R.string.tab_home)) },
-                )
-                NavigationBarItem(
-                    selected = vehicleRoute == null && destination == AppDestination.CONNECTION,
-                    onClick = {
-                        addVehicleViewModel?.onScreenDisposed()
-                        vehicleDetailsViewModel?.onScreenDisposed()
-                        selectedVehicleId = null
-                        vehicleRoute = null
-                        destination = AppDestination.CONNECTION
-                    },
-                    icon = { Icon(Icons.Filled.Wifi, contentDescription = null) },
-                    label = { Text(stringResource(R.string.tab_connection)) },
-                )
-                NavigationBarItem(
-                    selected = vehicleRoute == null && destination == AppDestination.METRICS,
-                    onClick = {
-                        addVehicleViewModel?.onScreenDisposed()
-                        vehicleDetailsViewModel?.onScreenDisposed()
-                        selectedVehicleId = null
-                        vehicleRoute = null
-                        destination = AppDestination.METRICS
-                    },
-                    icon = { Icon(Icons.Filled.BarChart, contentDescription = null) },
-                    label = { Text(stringResource(R.string.tab_metrics)) },
-                )
-            }
+            AppBottomBar(
+                selected = if (vehicleRoute == null) destination else null,
+                onSelect = { target ->
+                    addVehicleViewModel?.onScreenDisposed()
+                    vehicleDetailsViewModel?.onScreenDisposed()
+                    selectedVehicleId = null
+                    vehicleRoute = null
+                    destination = target
+                },
+            )
         },
     ) { innerPadding ->
-        val contentModifier = Modifier.padding(innerPadding)
         val routedModifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
         when (vehicleRoute) {
-            VehicleRoute.LIST ->
-                VehicleListScreen(
-                    viewModel = vehicleListViewModel,
-                    onBack = {
-                        selectedVehicleId = null
-                        vehicleRoute = null
-                    },
-                    onAddVehicle = {
-                        addVehicleSession += 1
-                        vehicleRoute = VehicleRoute.ADD
-                    },
-                    onOpenVehicle = { vehicleId ->
-                        selectedVehicleId = vehicleId
-                        vehicleRoute = VehicleRoute.DETAILS
-                    },
-                    modifier = routedModifier,
-                )
-
             VehicleRoute.ADD ->
                 addVehicleViewModel?.let { viewModel ->
                     AddVehicleScreen(
                         viewModel = viewModel,
-                        onExit = { vehicleRoute = VehicleRoute.LIST },
-                        onSaved = { vehicleRoute = VehicleRoute.LIST },
+                        onExit = { vehicleRoute = null },
+                        onSaved = { vehicleRoute = null },
                         modifier = routedModifier,
                     )
                 }
@@ -235,15 +201,19 @@ private fun DriveDataApp() {
                         viewModel = viewModel,
                         onBack = {
                             viewModel.onScreenDisposed()
-                            vehicleRoute = VehicleRoute.LIST
+                            selectedVehicleId = null
+                            vehicleRoute = null
+                            destination = AppDestination.VEHICLES
                         },
                         onEdit = { vehicleId ->
+                            editReturnsToDetails = true
                             selectedVehicleId = vehicleId
                             vehicleRoute = VehicleRoute.EDIT
                         },
                         onDeleted = {
                             selectedVehicleId = null
-                            vehicleRoute = VehicleRoute.LIST
+                            vehicleRoute = null
+                            destination = AppDestination.VEHICLES
                         },
                         modifier = routedModifier,
                     )
@@ -253,8 +223,14 @@ private fun DriveDataApp() {
                 editVehicleViewModel?.let { viewModel ->
                     EditVehicleScreen(
                         viewModel = viewModel,
-                        onBack = { vehicleRoute = VehicleRoute.DETAILS },
-                        onSaved = { vehicleRoute = VehicleRoute.DETAILS },
+                        onBack = {
+                            vehicleRoute = if (editReturnsToDetails) VehicleRoute.DETAILS else null
+                            if (!editReturnsToDetails) selectedVehicleId = null
+                        },
+                        onSaved = {
+                            vehicleRoute = if (editReturnsToDetails) VehicleRoute.DETAILS else null
+                            if (!editReturnsToDetails) selectedVehicleId = null
+                        },
                         modifier = routedModifier,
                     )
                 }
@@ -265,8 +241,30 @@ private fun DriveDataApp() {
                         HomeScreen(
                             viewModel = homeViewModel,
                             onSeeAllReadings = { destination = AppDestination.METRICS },
-                            onOpenVehicles = { vehicleRoute = VehicleRoute.LIST },
-                            modifier = contentModifier,
+                            onOpenVehicles = { destination = AppDestination.VEHICLES },
+                            onSelectVehicle = homeViewModel::selectVehicle,
+                            onSignOut = authSession::signOut,
+                            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
+                        )
+
+                    AppDestination.VEHICLES ->
+                        VehicleListScreen(
+                            viewModel = vehicleListViewModel,
+                            onBack = { destination = AppDestination.HOME },
+                            onAddVehicle = {
+                                addVehicleSession += 1
+                                vehicleRoute = VehicleRoute.ADD
+                            },
+                            onOpenVehicle = { vehicleId ->
+                                selectedVehicleId = vehicleId
+                                vehicleRoute = VehicleRoute.DETAILS
+                            },
+                            onEditVehicle = { vehicleId ->
+                                editReturnsToDetails = false
+                                selectedVehicleId = vehicleId
+                                vehicleRoute = VehicleRoute.EDIT
+                            },
+                            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
                         )
 
                     AppDestination.CONNECTION ->
@@ -286,3 +284,52 @@ private fun DriveDataApp() {
         }
     }
 }
+
+@Composable
+private fun AppBottomBar(
+    selected: AppDestination?,
+    onSelect: (AppDestination) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(HomeSurface),
+    ) {
+        HorizontalDivider(thickness = 1.dp, color = HomeDivider)
+        NavigationBar(
+            containerColor = HomeSurface,
+            tonalElevation = 0.dp,
+        ) {
+            AppDestination.entries.forEach { destination ->
+                val isSelected = destination == selected
+                NavigationBarItem(
+                    selected = isSelected,
+                    onClick = { onSelect(destination) },
+                    icon = {
+                        Icon(
+                            imageVector = navIcon(destination, isSelected),
+                            contentDescription = null,
+                        )
+                    },
+                    label = { Text(stringResource(destination.labelRes)) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = HomeBlue,
+                        selectedTextColor = HomeBlue,
+                        indicatorColor = Color.Transparent,
+                        unselectedIconColor = HomeTextSecondary,
+                        unselectedTextColor = HomeTextSecondary,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+private fun navIcon(destination: AppDestination, selected: Boolean): ImageVector =
+    when (destination) {
+        AppDestination.HOME -> if (selected) Icons.Filled.Home else Icons.Outlined.Home
+        AppDestination.VEHICLES ->
+            if (selected) Icons.Filled.DirectionsCar else Icons.Outlined.DirectionsCar
+        AppDestination.CONNECTION -> if (selected) Icons.Filled.Wifi else Icons.Outlined.Wifi
+        AppDestination.METRICS -> if (selected) Icons.Filled.BarChart else Icons.Outlined.BarChart
+    }

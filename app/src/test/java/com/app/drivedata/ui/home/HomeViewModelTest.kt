@@ -13,6 +13,10 @@ import com.app.drivedata.obd.model.ObdWifiConfig
 import com.app.drivedata.storage.StorageStats
 import com.app.drivedata.sync.SyncError
 import com.app.drivedata.sync.SyncStatus
+import com.app.drivedata.vehicle.model.Elm327Connection
+import com.app.drivedata.vehicle.model.Vehicle
+import com.app.drivedata.vehicle.model.VehicleCapabilities
+import com.app.drivedata.vehicle.model.VehicleDetails
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -95,6 +99,35 @@ class HomeViewModelTest {
             assertFalse(state.isCollecting)
         }
 
+    @Test
+    fun exposesVehiclesForTheHeaderSelector() =
+        runTest {
+            val vehicle = vehicle("vehicle-1", active = true)
+            val viewModel = homeViewModel(vehicles = flowOf(listOf(vehicle)))
+
+            val state = viewModel.awaitState { it.vehicles.isNotEmpty() }
+
+            assertEquals(listOf(vehicle), state.vehicles)
+            assertTrue(state.vehicles.single().isActive)
+        }
+
+    @Test
+    fun selectsVehicleFromTheHeaderList() =
+        runTest {
+            val vehicle = vehicle("vehicle-1", active = false)
+            val selected = mutableListOf<Vehicle>()
+            val viewModel =
+                homeViewModel(
+                    vehicles = flowOf(listOf(vehicle)),
+                    activateVehicle = { selected += it; true },
+                )
+
+            viewModel.awaitState { it.vehicles.isNotEmpty() }
+            viewModel.selectVehicle("vehicle-1")
+
+            assertEquals(listOf(vehicle), selected)
+        }
+
     private fun homeViewModel(
         connection: MutableStateFlow<ObdConnectionState> =
             MutableStateFlow(ObdConnectionState.Disconnected),
@@ -102,9 +135,12 @@ class HomeViewModelTest {
             MutableStateFlow(MetricsCollectionState()),
         syncStatus: MutableStateFlow<SyncStatus> = MutableStateFlow(SyncStatus()),
         activeVehicle: Flow<ActiveVehicleCollection?> = flowOf(activeVehicle()),
+        vehicles: Flow<List<Vehicle>> = flowOf(emptyList()),
+        activateVehicle: suspend (Vehicle) -> Boolean = { true },
     ): HomeViewModel =
         HomeViewModel(
             activeVehicle = activeVehicle,
+            vehicles = vehicles,
             connectionState = connection,
             collectionState = collection,
             pendingCount = flowOf(12),
@@ -114,6 +150,7 @@ class HomeViewModelTest {
             syncStatus = syncStatus,
             storageStats = flowOf(StorageStats(usedBytes = 12_582_912L, budgetBytes = 1_073_741_824L)),
             onSyncNow = {},
+            activateVehicle = activateVehicle,
         )
 
     private suspend fun HomeViewModel.awaitState(predicate: (HomeUiState) -> Boolean): HomeUiState =
@@ -130,6 +167,18 @@ class HomeViewModelTest {
             port = 35_000,
             hasDiscovery = true,
             catalog = defaultMetricCatalog,
+        )
+
+    private fun vehicle(id: String, active: Boolean): Vehicle =
+        Vehicle(
+            id = id,
+            ownerUsername = "owner",
+            details = VehicleDetails(make = "Chevrolet", model = "S10"),
+            connection = Elm327Connection.unconfigured(),
+            capabilities = VehicleCapabilities(),
+            isActive = active,
+            createdAtMillis = 0L,
+            updatedAtMillis = 0L,
         )
 
     private fun snapshot(timestampMillis: Long): MetricsSnapshot =
