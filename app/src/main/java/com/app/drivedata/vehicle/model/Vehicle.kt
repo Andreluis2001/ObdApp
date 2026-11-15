@@ -13,6 +13,7 @@ data class Vehicle(
     val id: String,
     val ownerUsername: String,
     val details: VehicleDetails,
+    val identity: VehicleIdentity? = null,
     val connection: Elm327Connection,
     val capabilities: VehicleCapabilities,
     val isActive: Boolean,

@@ -10,6 +10,7 @@ import com.app.drivedata.vehicle.model.ConnectionStatus
 import com.app.drivedata.vehicle.model.Elm327Connection
 import com.app.drivedata.vehicle.model.Vehicle
 import com.app.drivedata.vehicle.model.VehicleDetails
+import com.app.drivedata.vehicle.model.VehicleIdentity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -71,6 +72,7 @@ class VehicleRepository(
      */
     suspend fun create(
         details: VehicleDetails,
+        identity: VehicleIdentity? = null,
         connection: Elm327Connection? = null,
         discoveredPids: Set<Int>? = null,
         discoveredAtMillis: Long = clock(),
@@ -85,6 +87,9 @@ class VehicleRepository(
                 make = details.make,
                 model = details.model,
                 licensePlate = details.licensePlate,
+                vin = identity?.vin,
+                manufacturer = identity?.manufacturer,
+                serialNumber = identity?.serialNumber,
                 isActive = dao.countVehicles(owner) == 0,
                 createdAtMillis = now,
                 updatedAtMillis = now,

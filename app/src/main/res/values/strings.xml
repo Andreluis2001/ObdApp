@@ -195,6 +195,11 @@
     <string name="vehicle_details_adapter">Adaptador</string>
     <string name="vehicle_details_capabilities">Parâmetros suportados</string>
     <string name="vehicle_details_plate">Placa</string>
+    <string name="vehicle_details_identity">Identificação pelo VIN</string>
+    <string name="vehicle_vin_label">VIN</string>
+    <string name="vehicle_manufacturer_label">Fabricante</string>
+    <string name="vehicle_serial_label">Número de série</string>
+    <string name="vehicle_identity_unavailable">Não disponível</string>
     <string name="vehicle_details_last_connection">Última conexão com o adaptador</string>
     <string name="vehicle_details_no_capabilities">Nenhum parâmetro descoberto para este veículo. Conecte o adaptador e redescubra os parâmetros suportados.</string>
     <string name="vehicle_details_not_found">Não foi possível carregar este veículo.</string>
@@ -241,6 +246,10 @@
     <string name="add_vehicle_connecting">Conectando ao adaptador\u2026</string>
     <string name="add_vehicle_initializing">Inicializando o ELM327\u2026</string>
     <string name="add_vehicle_testing_ecu">Verificando a comunicação com o veículo\u2026</string>
+    <string name="add_vehicle_reading_identity">Identificando o veículo pelo VIN\u2026</string>
+    <string name="add_vehicle_identity_title">Veículo identificado</string>
+    <string name="add_vehicle_identity_hint">Dados lidos do VIN informado pela ECU.</string>
+    <string name="add_vehicle_identity_unavailable">O veículo não informou um VIN válido. A configuração pode continuar normalmente.</string>
     <string name="add_vehicle_discovering">Descobrindo parâmetros suportados\u2026</string>
     <string name="add_vehicle_discovery_progress">Faixa 0x%1$02X \u2022 %2$d parâmetros encontrados</string>
     <string name="add_vehicle_saving">Salvando veículo\u2026</string>

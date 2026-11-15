@@ -13,12 +13,14 @@ import com.app.drivedata.metrics.toActiveVehicleCollection
 import com.app.drivedata.metrics.dao.DriveDataDatabase
 import com.app.drivedata.obd.ObdConnectionManager
 import com.app.drivedata.obd.PidDiscoveryCoordinator
+import com.app.drivedata.obd.VinReader
 import com.app.drivedata.obd.transport.WifiNetworkLookup
 import com.app.drivedata.settings.AppSettingsRepository
 import com.app.drivedata.storage.StorageStatsProvider
 import com.app.drivedata.sync.SyncScheduler
 import com.app.drivedata.sync.TelemetrySyncEngine
 import com.app.drivedata.vehicle.ActiveVehicleSwitcher
+import com.app.drivedata.vehicle.VehicleIdentityExtractor
 import com.app.drivedata.vehicle.VehicleRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +38,7 @@ class AppContainer(context: Context) {
     val settingsRepository = AppSettingsRepository(appContext)
     val obdConnectionManager = ObdConnectionManager(WifiNetworkLookup(appContext))
     val pidDiscoveryCoordinator = PidDiscoveryCoordinator(obdConnectionManager)
+    val vehicleIdentityExtractor = VehicleIdentityExtractor(VinReader(obdConnectionManager)::read)
     val metricsCollector = ObdMetricsCollector(obdConnectionManager)
     val connectivityObserver = ConnectivityObserver(appContext)
 

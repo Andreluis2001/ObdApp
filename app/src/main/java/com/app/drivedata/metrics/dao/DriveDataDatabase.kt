@@ -22,7 +22,7 @@ import com.app.drivedata.vehicle.entity.VehicleEntity
         Elm327ConnectionEntity::class,
         SupportedPidEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class DriveDataDatabase : RoomDatabase() {
@@ -187,12 +187,31 @@ abstract class DriveDataDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Adds the VIN and the values decoded from it to the vehicle record. Existing vehicles keep
+         * null identity columns until they are paired again.
+         */
+        internal val MIGRATION_5_6 =
+            object : Migration(5, 6) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `vehicles` ADD COLUMN `vin` TEXT")
+                    db.execSQL("ALTER TABLE `vehicles` ADD COLUMN `manufacturer` TEXT")
+                    db.execSQL("ALTER TABLE `vehicles` ADD COLUMN `serial_number` TEXT")
+                }
+            }
+
         fun build(context: Context): DriveDataDatabase =
             Room.databaseBuilder(
                 context.applicationContext,
                 DriveDataDatabase::class.java,
                 DATABASE_NAME,
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            ).addMigrations(
+                MIGRATION_1_2,
+                MIGRATION_2_3,
+                MIGRATION_3_4,
+                MIGRATION_4_5,
+                MIGRATION_5_6,
+            )
                 .build()
     }
 }

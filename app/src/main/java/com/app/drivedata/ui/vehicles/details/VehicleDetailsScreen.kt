@@ -292,6 +292,25 @@ private fun VehicleInfoCard(
             RowDivider()
             InfoRow(label = stringResource(R.string.vehicle_details_plate), value = plate)
         }
+
+        vehicle.identity?.let { identity ->
+            RowDivider()
+            Text(
+                text = stringResource(R.string.vehicle_details_identity),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = HomeTextPrimary,
+            )
+            InfoRow(label = stringResource(R.string.vehicle_vin_label), value = identity.vin)
+            InfoRow(
+                label = stringResource(R.string.vehicle_manufacturer_label),
+                value = identity.manufacturer ?: stringResource(R.string.vehicle_identity_unavailable),
+            )
+            InfoRow(
+                label = stringResource(R.string.vehicle_serial_label),
+                value = identity.serialNumber ?: stringResource(R.string.vehicle_identity_unavailable),
+            )
+        }
     }
 }
 

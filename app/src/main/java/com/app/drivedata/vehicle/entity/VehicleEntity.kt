@@ -9,6 +9,7 @@ import com.app.drivedata.vehicle.model.SupportedPid
 import com.app.drivedata.vehicle.model.Vehicle
 import com.app.drivedata.vehicle.model.VehicleCapabilities
 import com.app.drivedata.vehicle.model.VehicleDetails
+import com.app.drivedata.vehicle.model.VehicleIdentity
 
 @Entity(
     tableName = "vehicles",
@@ -25,6 +26,9 @@ data class VehicleEntity(
     val make: String,
     val model: String,
     @ColumnInfo(name = "license_plate") val licensePlate: String?,
+    val vin: String? = null,
+    val manufacturer: String? = null,
+    @ColumnInfo(name = "serial_number") val serialNumber: String? = null,
     @ColumnInfo(name = "is_active", defaultValue = "0") val isActive: Boolean,
     @ColumnInfo(name = "created_at_millis") val createdAtMillis: Long,
     @ColumnInfo(name = "updated_at_millis") val updatedAtMillis: Long,
@@ -43,6 +47,14 @@ internal fun VehicleEntity.toVehicle(
                 model = model,
                 licensePlate = licensePlate,
             ),
+        identity =
+            vin?.let {
+                VehicleIdentity(
+                    vin = it,
+                    manufacturer = manufacturer,
+                    serialNumber = serialNumber,
+                )
+            },
         connection = connection?.toModel() ?: Elm327Connection.unconfigured(),
         capabilities =
             VehicleCapabilities(

@@ -5,6 +5,7 @@ import com.app.drivedata.vehicle.ConnectionConfigErrors
 import com.app.drivedata.vehicle.ConnectionDraft
 import com.app.drivedata.vehicle.VehicleDetailsDraft
 import com.app.drivedata.vehicle.VehicleDetailsErrors
+import com.app.drivedata.vehicle.model.VehicleIdentity
 
 enum class FormStep { VEHICLE, ADAPTER }
 
@@ -37,12 +38,15 @@ sealed interface VehicleSetupState {
 
     data object TestingEcu : VehicleSetupState
 
+    data object ReadingIdentity : VehicleSetupState
+
     data class DiscoveringPids(val rangeBase: Int, val foundCount: Int) : VehicleSetupState
 
     data class Review(
         val pids: List<DiscoveredPid>,
         val discoveredPids: Set<Int>,
         val discoveredAtMillis: Long,
+        val identity: VehicleIdentity? = null,
     ) : VehicleSetupState
 
     data class Failed(val stage: SetupStage, val failure: SetupFailure) : VehicleSetupState

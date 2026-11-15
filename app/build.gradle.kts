@@ -69,6 +69,11 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.work.runtime)
     implementation(libs.kotlin.obd.api)
+    // kvininfo 2.0.0 accidentally publishes its test-only dependencies as runtime artifacts.
+    implementation(libs.kvininfo) {
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-test")
+        exclude(group = "io.ktor", module = "ktor-client-mock")
+    }
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)

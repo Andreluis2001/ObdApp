@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.drivedata.R
+import com.app.drivedata.ui.common.InfoRow
 import com.app.drivedata.ui.common.LightStatusBarIcons
 import com.app.drivedata.ui.common.PrimaryButton
 import com.app.drivedata.ui.common.SecondaryButton
@@ -153,6 +154,9 @@ fun AddVehicleScreen(
 
                 VehicleSetupState.TestingEcu ->
                     BusyStep(messageRes = R.string.add_vehicle_testing_ecu)
+
+                VehicleSetupState.ReadingIdentity ->
+                    BusyStep(messageRes = R.string.add_vehicle_reading_identity)
 
                 is VehicleSetupState.DiscoveringPids ->
                     BusyStep(
@@ -334,6 +338,42 @@ private fun ReviewStep(
             style = MaterialTheme.typography.bodySmall,
             color = HomeTextSecondary,
         )
+        val identity = review.identity
+        if (identity != null) {
+            Text(
+                text = stringResource(R.string.add_vehicle_identity_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = HomeTextPrimary,
+            )
+            Text(
+                text = stringResource(R.string.add_vehicle_identity_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = HomeTextSecondary,
+            )
+            InfoRow(
+                label = stringResource(R.string.vehicle_vin_label),
+                value = identity.vin,
+            )
+            identity.manufacturer?.let { manufacturer ->
+                InfoRow(
+                    label = stringResource(R.string.vehicle_manufacturer_label),
+                    value = manufacturer,
+                )
+            }
+            identity.serialNumber?.let { serialNumber ->
+                InfoRow(
+                    label = stringResource(R.string.vehicle_serial_label),
+                    value = serialNumber,
+                )
+            }
+        } else {
+            Text(
+                text = stringResource(R.string.add_vehicle_identity_unavailable),
+                style = MaterialTheme.typography.bodySmall,
+                color = HomeTextSecondary,
+            )
+        }
         Text(
             text =
                 stringResource(
@@ -524,6 +564,7 @@ private fun VehicleSetupState.subtitleRes(): Int? =
         VehicleSetupState.ConnectingAdapter,
         VehicleSetupState.InitializingAdapter,
         VehicleSetupState.TestingEcu,
+        VehicleSetupState.ReadingIdentity,
         is VehicleSetupState.DiscoveringPids,
         -> R.string.add_vehicle_step_adapter
 
@@ -538,6 +579,7 @@ private fun VehicleSetupState.progressStep(): Int =
         VehicleSetupState.ConnectingAdapter,
         VehicleSetupState.InitializingAdapter,
         VehicleSetupState.TestingEcu,
+        VehicleSetupState.ReadingIdentity,
         is VehicleSetupState.DiscoveringPids,
         -> 1
 

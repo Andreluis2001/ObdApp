@@ -37,6 +37,7 @@ import com.app.drivedata.vehicle.VehicleDetailsValidator
 import com.app.drivedata.vehicle.VehicleRepository
 import com.app.drivedata.vehicle.model.Elm327Connection
 import com.app.drivedata.vehicle.model.VehicleDetails
+import com.app.drivedata.vehicle.model.VehicleIdentity
 import com.app.drivedata.vehicle.resolveConnectionStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -59,6 +60,7 @@ class AddVehicleViewModel(
     private val settingsRepository: AppSettingsRepository,
     private val connectionManager: ObdConnectionManager,
     private val discoverPids: suspend (onProgress: (rangeBase: Int, foundCount: Int) -> Unit) -> PidDiscoveryResult,
+    private val readVehicleIdentity: suspend () -> VehicleIdentity?,
     private val metricsController: MetricsCollectionController,
     private val catalog: List<MetricDefinition> = defaultMetricCatalog,
     private val clock: () -> Long = System::currentTimeMillis,
@@ -78,6 +80,7 @@ class AddVehicleViewModel(
     private var attemptedConnection = false
     private var connectedAtMillis: Long? = null
     private var ecuVerifiedAtMillis: Long? = null
+    private var vehicleIdentity: VehicleIdentity? = null
     private var saved = false
 
     private val connectionAtEntry: ObdConnectionState = connectionManager.state.value
@@ -371,6 +374,8 @@ class AddVehicleViewModel(
                 connectedAtMillis = clock()
                 if (connected.ecuStatus == EcuStatus.VERIFIED) {
                     ecuVerifiedAtMillis = clock()
+                    _state.value = VehicleSetupState.ReadingIdentity
+                    vehicleIdentity = readIdentitySafely()
                     runDiscovery()
                 } else {
                     _state.value =
@@ -403,7 +408,13 @@ class AddVehicleViewModel(
             }
         when (result) {
             is PidDiscoveryResult.Success -> {
-                val review = buildReview(result.pids, result.discoveredAtMillis, previousEnabled)
+                val review =
+                    buildReview(
+                        pids = result.pids,
+                        discoveredAtMillis = result.discoveredAtMillis,
+                        previousEnabled = previousEnabled,
+                        identity = vehicleIdentity,
+                    )
                 lastReview = review
                 _state.value = review
             }
@@ -421,6 +432,7 @@ class AddVehicleViewModel(
         pids: Set<Int>,
         discoveredAtMillis: Long,
         previousEnabled: Map<Int, Boolean>,
+        identity: VehicleIdentity?,
     ): VehicleSetupState.Review {
         val reviewPids =
             catalog.mapNotNull { definition ->
@@ -435,6 +447,7 @@ class AddVehicleViewModel(
             pids = reviewPids,
             discoveredPids = pids,
             discoveredAtMillis = discoveredAtMillis,
+            identity = identity,
         )
     }
 
@@ -467,6 +480,7 @@ class AddVehicleViewModel(
             try {
                 vehicleRepository.create(
                     details = details,
+                    identity = vehicleIdentity,
                     connection = connection,
                     discoveredPids = review?.discoveredPids,
                     discoveredAtMillis = review?.discoveredAtMillis ?: now,
@@ -586,7 +600,17 @@ class AddVehicleViewModel(
         attemptedConnection = false
         connectedAtMillis = null
         ecuVerifiedAtMillis = null
+        vehicleIdentity = null
     }
+
+    private suspend fun readIdentitySafely(): VehicleIdentity? =
+        try {
+            readVehicleIdentity()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            null
+        }
 
     private fun currentForm(): VehicleSetupState.Form? =
         (_state.value as? VehicleSetupState.Form) ?: lastForm
@@ -622,6 +646,7 @@ class AddVehicleViewModel(
                         discoverPids = { onProgress ->
                             container.pidDiscoveryCoordinator.discover(onProgress)
                         },
+                        readVehicleIdentity = container.vehicleIdentityExtractor::read,
                         metricsController = container.metricsCollectionController,
                     )
                 }
