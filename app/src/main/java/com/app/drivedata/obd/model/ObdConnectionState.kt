@@ -31,6 +31,10 @@ enum class ConnectionFailure {
 }
 
 sealed interface ObdConnectionState {
+    /** True while a session is live or being established (Connecting, Initializing, Connected). */
+    val isSessionActive: Boolean
+        get() = this is Connecting || this is Initializing || this is Connected
+
     data object Disconnected : ObdConnectionState
 
     data class Connecting(val config: ObdWifiConfig) : ObdConnectionState

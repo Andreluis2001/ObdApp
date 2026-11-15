@@ -10,6 +10,7 @@ import com.app.drivedata.obd.ObdConnectionManager
 import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.obd.model.ObdWifiConfig
 import com.app.drivedata.settings.AppSettingsRepository
+import com.app.drivedata.vehicle.VehicleRepository
 import com.app.drivedata.vehicle.model.Vehicle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +36,7 @@ data class ConnectionUiState(
 
 class ConnectionViewModel(
     private val settingsRepository: AppSettingsRepository,
+    private val vehicleRepository: VehicleRepository,
     private val obdConnectionManager: ObdConnectionManager,
     activeVehicle: Flow<Vehicle?>,
 ) : ViewModel() {
@@ -42,8 +44,15 @@ class ConnectionViewModel(
     private val host = MutableStateFlow("")
     private val port = MutableStateFlow("")
 
+    private val currentVehicle: StateFlow<Vehicle?> =
+        activeVehicle.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = null,
+        )
+
     val uiState: StateFlow<ConnectionUiState> =
-        combine(host, port, obdConnectionManager.state, activeVehicle) { hostValue, portValue, connection, vehicle ->
+        combine(host, port, obdConnectionManager.state, currentVehicle) { hostValue, portValue, connection, vehicle ->
             ConnectionUiState(
                 host = hostValue,
                 port = portValue,
@@ -60,9 +69,25 @@ class ConnectionViewModel(
 
     init {
         viewModelScope.launch {
-            val saved = settingsRepository.currentWifiConfig()
-            host.value = saved.host
-            port.value = saved.port.toString()
+            currentVehicle.collect { vehicle ->
+                if (obdConnectionManager.state.value.isSessionActive) return@collect
+                syncFieldsFrom(vehicle)
+            }
+        }
+    }
+
+    /**
+     * Mirrors the selected vehicle's ELM adapter address into the editable IP/PORT fields.
+     * Vehicles without a configured adapter leave the fields empty, prompting the user to pair.
+     */
+    private fun syncFieldsFrom(vehicle: Vehicle?) {
+        val connection = vehicle?.connection
+        if (connection != null && connection.isConfigured) {
+            host.value = connection.host
+            port.value = connection.port.toString()
+        } else {
+            host.value = ""
+            port.value = ""
         }
     }
 
@@ -79,6 +104,9 @@ class ConnectionViewModel(
         viewModelScope.launch {
             if (config.isValid) {
                 settingsRepository.saveWifiConfig(config)
+                currentVehicle.value?.let { vehicle ->
+                    vehicleRepository.saveConnectionConfig(vehicle.id, config.host, config.port)
+                }
             }
             obdConnectionManager.connect(config)
         }
@@ -98,6 +126,7 @@ class ConnectionViewModel(
                 initializer {
                     ConnectionViewModel(
                         settingsRepository = application.container.settingsRepository,
+                        vehicleRepository = application.container.vehicleRepository,
                         obdConnectionManager = application.container.obdConnectionManager,
                         activeVehicle = application.container.vehicleRepository.observeActiveVehicle(),
                     )
