@@ -22,10 +22,8 @@ import com.app.drivedata.vehicle.model.VehicleDetails
 data class VehicleEntity(
     @PrimaryKey val id: String,
     @ColumnInfo(name = "owner_username") val ownerUsername: String,
-    val nickname: String?,
     val make: String,
     val model: String,
-    val year: Int?,
     @ColumnInfo(name = "license_plate") val licensePlate: String?,
     @ColumnInfo(name = "is_active", defaultValue = "0") val isActive: Boolean,
     @ColumnInfo(name = "created_at_millis") val createdAtMillis: Long,
@@ -43,9 +41,7 @@ internal fun VehicleEntity.toVehicle(
             VehicleDetails(
                 make = make,
                 model = model,
-                year = year,
                 licensePlate = licensePlate,
-                nickname = nickname,
             ),
         connection = connection?.toModel() ?: Elm327Connection.unconfigured(),
         capabilities =

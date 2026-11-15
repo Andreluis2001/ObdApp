@@ -120,19 +120,8 @@ class AddVehicleViewModel(
         }
     }
 
-    fun onYearChange(value: String) {
-        val digits = value.filter(Char::isDigit).take(4)
-        updateForm { form ->
-            form.copy(
-                details = form.details.copy(year = digits),
-                errors = form.errors.copy(details = form.errors.details.copy(year = false)),
-            )
-        }
-    }
-
     fun onPlateChange(value: String) {
-        val normalized =
-            value.uppercase().filter { it.isLetterOrDigit() || it == '-' || it == ' ' }.take(10)
+        val normalized = value.uppercase().filter(Char::isLetterOrDigit).take(7)
         updateForm { form ->
             form.copy(
                 details = form.details.copy(licensePlate = normalized),
@@ -141,21 +130,13 @@ class AddVehicleViewModel(
         }
     }
 
-    fun onNicknameChange(value: String) {
-        updateForm { form ->
-            form.copy(
-                details = form.details.copy(nickname = value),
-                errors = form.errors.copy(details = form.errors.details.copy(nickname = false)),
-            )
-        }
-    }
-
     fun onHostChange(value: String) {
+        val filtered = value.filter { it.isDigit() || it == '.' }.take(15)
         resetAttemptState()
         lastReview = null
         updateForm { form ->
             form.copy(
-                connection = form.connection.copy(host = value),
+                connection = form.connection.copy(host = filtered),
                 errors = form.errors.copy(connection = form.errors.connection.copy(host = false)),
             )
         }

@@ -83,19 +83,8 @@ class EditVehicleViewModel(
             )
     }
 
-    fun onYearChange(value: String) {
-        val digits = value.filter(Char::isDigit).take(4)
-        _state.value =
-            _state.value.copy(
-                draft = _state.value.draft.copy(year = digits),
-                errors = _state.value.errors.copy(details = _state.value.errors.details.copy(year = false)),
-                saveFailed = false,
-            )
-    }
-
     fun onPlateChange(value: String) {
-        val normalized =
-            value.uppercase().filter { it.isLetterOrDigit() || it == '-' || it == ' ' }.take(10)
+        val normalized = value.uppercase().filter(Char::isLetterOrDigit).take(7)
         _state.value =
             _state.value.copy(
                 draft = _state.value.draft.copy(licensePlate = normalized),
@@ -104,19 +93,11 @@ class EditVehicleViewModel(
             )
     }
 
-    fun onNicknameChange(value: String) {
-        _state.value =
-            _state.value.copy(
-                draft = _state.value.draft.copy(nickname = value),
-                errors = _state.value.errors.copy(details = _state.value.errors.details.copy(nickname = false)),
-                saveFailed = false,
-            )
-    }
-
     fun onHostChange(value: String) {
+        val filtered = value.filter { it.isDigit() || it == '.' }.take(15)
         _state.value =
             _state.value.copy(
-                connection = _state.value.connection.copy(host = value),
+                connection = _state.value.connection.copy(host = filtered),
                 errors = _state.value.errors.copy(connection = _state.value.errors.connection.copy(host = false)),
                 saveFailed = false,
             )
@@ -197,9 +178,7 @@ class EditVehicleViewModel(
         VehicleDetailsDraft(
             make = make,
             model = model,
-            year = year?.toString().orEmpty(),
             licensePlate = licensePlate.orEmpty(),
-            nickname = nickname.orEmpty(),
         )
 
     companion object {

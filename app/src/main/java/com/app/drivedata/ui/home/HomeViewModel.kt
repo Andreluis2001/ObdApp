@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.app.drivedata.DriveDataApplication
 import com.app.drivedata.metrics.ActiveVehicleCollection
 import com.app.drivedata.metrics.MetricsCollectionState
+import com.app.drivedata.metrics.model.MetricId
 import com.app.drivedata.metrics.model.MetricsSnapshot
 import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
@@ -33,6 +34,7 @@ data class HomeUiState(
     val isConnected: Boolean = false,
     val isCollecting: Boolean = false,
     val snapshot: MetricsSnapshot? = null,
+    val history: Map<MetricId, List<Double>> = emptyMap(),
     val lastSyncedAtMillis: Long? = null,
     val pendingCount: Int = 0,
     val rejectedCount: Int = 0,
@@ -59,6 +61,7 @@ class HomeViewModel(
     vehicles: Flow<List<Vehicle>>,
     connectionState: StateFlow<ObdConnectionState>,
     collectionState: StateFlow<MetricsCollectionState>,
+    readingHistory: Flow<Map<MetricId, List<Double>>>,
     pendingCount: Flow<Int>,
     rejectedCount: Flow<Int>,
     lastSyncedAtMillis: Flow<Long?>,
@@ -114,6 +117,8 @@ class HomeViewModel(
                 storageUsedBytes = storage.usedBytes,
                 storageBudgetBytes = storage.budgetBytes,
             )
+        }.combine(readingHistory) { state, history ->
+            state.copy(history = history)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
@@ -150,6 +155,7 @@ class HomeViewModel(
                         vehicles = container.vehicleRepository.observeVehicles(),
                         connectionState = container.obdConnectionManager.state,
                         collectionState = container.metricsCollectionController.state,
+                        readingHistory = container.metricsCollectionController.history,
                         pendingCount = owner.flatMapLatest { user ->
                             if (user == null) flowOf(0) else container.metricsRepository.observePendingCount(user)
                         },

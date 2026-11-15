@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -32,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.app.drivedata.R
+import com.app.drivedata.ui.common.StatusLabel
 import com.app.drivedata.ui.theme.HomeBlue
 import com.app.drivedata.ui.theme.HomeDivider
 import com.app.drivedata.ui.theme.HomeSurface
@@ -105,18 +105,10 @@ fun VehicleCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(8.dp)
-                                .background(vehicle.connection.status.color(), CircleShape),
-                    )
-                    Text(
-                        text = vehicle.connection.status.label(),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
+                    StatusLabel(
                         color = vehicle.connection.status.color(),
-                        maxLines = 1,
+                        label = vehicle.connection.status.label(),
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                 }
             }
@@ -143,15 +135,5 @@ fun VehicleCard(
 }
 
 @Composable
-private fun vehicleSubtitle(vehicle: Vehicle): String? {
-    val year = vehicle.details.year
-    val plate = vehicle.details.licensePlate
-    return when {
-        year != null && plate != null ->
-            stringResource(R.string.vehicle_year_plate_value, year, plate)
-
-        year != null -> stringResource(R.string.vehicle_year_value, year)
-        plate != null -> plate
-        else -> null
-    }
-}
+private fun vehicleSubtitle(vehicle: Vehicle): String? =
+    vehicle.details.licensePlate

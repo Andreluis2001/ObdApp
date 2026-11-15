@@ -67,11 +67,11 @@ class ConnectionViewModel(
     }
 
     fun onHostChange(value: String) {
-        host.value = value
+        host.value = value.filter { it.isDigit() || it == '.' }.take(15)
     }
 
     fun onPortChange(value: String) {
-        port.value = value.filter(Char::isDigit)
+        port.value = value.filter(Char::isDigit).take(5)
     }
 
     fun connect() {

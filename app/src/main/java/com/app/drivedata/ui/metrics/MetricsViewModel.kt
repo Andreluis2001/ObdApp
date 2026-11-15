@@ -11,18 +11,13 @@ import com.app.drivedata.metrics.MetricsCollectionController
 import com.app.drivedata.metrics.MetricsCollectionError
 import com.app.drivedata.metrics.model.MetricId
 import com.app.drivedata.metrics.model.MetricsSnapshot
-import com.app.drivedata.metrics.model.ReadingValue
 import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 enum class MetricsError {
     STORAGE,
@@ -50,27 +45,11 @@ class MetricsViewModel(
     private val controller: MetricsCollectionController,
 ) : ViewModel() {
 
-    private val history = MutableStateFlow<Map<MetricId, List<Double>>>(emptyMap())
-
-    init {
-        viewModelScope.launch {
-            controller.state.collect { collection ->
-                val snapshot = collection.snapshot
-                if (snapshot == null) {
-                    history.value = emptyMap()
-                    return@collect
-                }
-                if (!collection.isCollecting) return@collect
-                history.update { current -> current.appendedWith(snapshot) }
-            }
-        }
-    }
-
     val uiState: StateFlow<MetricsUiState> =
         combine(
             connectionState,
             controller.state,
-            history,
+            controller.history,
             activeVehicle,
         ) { connection, collection, points, vehicle ->
             MetricsUiState(
@@ -111,21 +90,6 @@ class MetricsViewModel(
                 }
             }
     }
-}
-
-private const val MAX_HISTORY_POINTS = 40
-
-private fun Map<MetricId, List<Double>>.appendedWith(
-    snapshot: MetricsSnapshot,
-): Map<MetricId, List<Double>> {
-    val updated = HashMap<MetricId, List<Double>>(size + snapshot.readings.size)
-    updated.putAll(this)
-    snapshot.readings.forEach { reading ->
-        val available = reading.value as? ReadingValue.Available ?: return@forEach
-        updated[reading.id] =
-            (updated[reading.id].orEmpty() + available.value).takeLast(MAX_HISTORY_POINTS)
-    }
-    return updated
 }
 
 private fun MetricsCollectionError.toUiError(): MetricsError =

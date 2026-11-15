@@ -2,6 +2,7 @@ package com.app.drivedata.ui.home
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,16 +22,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.ButtonDefaults
@@ -73,6 +71,10 @@ import com.app.drivedata.ui.common.formatClockTime
 import com.app.drivedata.ui.common.formatDateTime
 import com.app.drivedata.ui.common.formatMetricValue
 import com.app.drivedata.ui.common.isSameDay
+import com.app.drivedata.ui.common.MetricSparkline
+import com.app.drivedata.ui.common.TintedIconBadge
+import com.app.drivedata.ui.metrics.MetricPresentation
+import com.app.drivedata.ui.metrics.presentation
 import com.app.drivedata.ui.theme.HomeBackground
 import com.app.drivedata.ui.theme.HomeBlue
 import com.app.drivedata.ui.theme.HomeDivider
@@ -84,6 +86,9 @@ import com.app.drivedata.ui.theme.HomeSurface
 import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
 import com.app.drivedata.ui.theme.LoginBackgroundTop
+import com.app.drivedata.ui.theme.LoginField
+import com.app.drivedata.ui.theme.LoginFieldBorder
+import com.app.drivedata.ui.theme.LoginTextMuted
 import com.app.drivedata.vehicle.model.Vehicle
 
 @Composable
@@ -103,7 +108,6 @@ fun HomeScreen(
         onOpenVehicles = onOpenVehicles,
         onSelectVehicle = onSelectVehicle,
         onSignOut = onSignOut,
-        onSyncNow = viewModel::syncNow,
         modifier = modifier,
     )
 }
@@ -115,7 +119,6 @@ private fun HomeContent(
     onOpenVehicles: () -> Unit,
     onSelectVehicle: (String) -> Unit,
     onSignOut: () -> Unit,
-    onSyncNow: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -140,10 +143,10 @@ private fun HomeContent(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            CollectionCard(state = state, onSyncNow = onSyncNow)
+            CollectionCard(state = state)
 
             SectionTitle(stringResource(R.string.home_main_parameters))
-            MainParameters(snapshot = state.snapshot)
+            MainParameters(history = state.history, snapshot = state.snapshot)
             SeeAllRow(onClick = onSeeAllReadings)
 
             SectionTitle(stringResource(R.string.home_connection_status))
@@ -204,7 +207,12 @@ private fun HomeHeader(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(HomeSurface)
+                    .background(LoginField)
+                    .border(
+                        width = 1.dp,
+                        color = LoginFieldBorder,
+                        shape = RoundedCornerShape(16.dp),
+                    )
                     .clickable {
                         if (vehicles.isEmpty()) {
                             onManageVehicles()
@@ -238,7 +246,7 @@ private fun HomeHeader(
                         },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (hasVehicle) HomeTextPrimary else HomeTextSecondary,
+                    color = if (hasVehicle) Color.White else LoginTextMuted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -246,7 +254,7 @@ private fun HomeHeader(
                 Icon(
                     imageVector = Icons.Filled.KeyboardArrowDown,
                     contentDescription = stringResource(R.string.home_select_vehicle),
-                    tint = HomeTextSecondary,
+                    tint = LoginTextMuted,
                 )
             }
             DropdownMenu(
@@ -314,7 +322,7 @@ private fun HomeHeader(
 }
 
 @Composable
-private fun CollectionCard(state: HomeUiState, onSyncNow: () -> Unit) {
+private fun CollectionCard(state: HomeUiState) {
     val adapterConnected = state.connection is ObdConnectionState.Connected
     Card(
         colors = CardDefaults.cardColors(containerColor = HomeSurface),
@@ -374,16 +382,6 @@ private fun CollectionCard(state: HomeUiState, onSyncNow: () -> Unit) {
                         color = HomeRed,
                     )
                 }
-                TextButton(
-                    onClick = onSyncNow,
-                    enabled = state.canSyncNow,
-                ) {
-                    Text(
-                        text = stringResource(
-                            if (state.isSyncing) R.string.home_sync_in_progress else R.string.home_sync_now,
-                        ),
-                    )
-                }
             }
         }
     }
@@ -391,11 +389,11 @@ private fun CollectionCard(state: HomeUiState, onSyncNow: () -> Unit) {
 
 @Composable
 private fun CollectionRing(isCollecting: Boolean) {
-    val accent = if (isCollecting) HomeGreen else HomeTextSecondary
+    val accent = if (isCollecting) HomeGreen else HomeRed
     Box(modifier = Modifier.size(112.dp), contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = if (isCollecting) HomeGreen else HomeDivider,
+                color = accent,
                 style = Stroke(width = 7.dp.toPx(), cap = StrokeCap.Round),
             )
         }
@@ -415,12 +413,6 @@ private fun CollectionRing(isCollecting: Boolean) {
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = accent,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                text = stringResource(if (isCollecting) R.string.home_sending else R.string.home_waiting),
-                style = MaterialTheme.typography.labelSmall,
-                color = HomeTextSecondary,
                 textAlign = TextAlign.Center,
             )
         }
@@ -482,54 +474,38 @@ private fun DetailRow(
 }
 
 @Composable
-private fun MainParameters(snapshot: MetricsSnapshot?) {
+private fun MainParameters(history: Map<MetricId, List<Double>>, snapshot: MetricsSnapshot?) {
+    val mainMetrics =
+        listOf(
+            MetricId.RPM,
+            MetricId.SPEED,
+            MetricId.COOLANT_TEMPERATURE,
+            MetricId.ENGINE_LOAD,
+        )
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            MetricTile(
-                icon = Icons.Filled.Speed,
-                tint = HomeGreen,
-                label = stringResource(R.string.home_metric_rpm),
-                unit = stringResource(R.string.home_unit_rpm),
-                value = snapshot.reading(MetricId.RPM),
-                modifier = Modifier.weight(1f),
-            )
-            MetricTile(
-                icon = Icons.Filled.DirectionsCar,
-                tint = HomeBlue,
-                label = stringResource(R.string.home_metric_speed),
-                unit = stringResource(R.string.home_unit_speed),
-                value = snapshot.reading(MetricId.SPEED),
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            MetricTile(
-                icon = Icons.Filled.Thermostat,
-                tint = HomeOrange,
-                label = stringResource(R.string.home_metric_coolant),
-                unit = stringResource(R.string.home_unit_temperature),
-                value = snapshot.reading(MetricId.COOLANT_TEMPERATURE),
-                modifier = Modifier.weight(1f),
-            )
-            MetricTile(
-                icon = Icons.Filled.Bolt,
-                tint = HomePurple,
-                label = stringResource(R.string.home_metric_load),
-                unit = stringResource(R.string.home_unit_percent),
-                value = snapshot.reading(MetricId.ENGINE_LOAD),
-                modifier = Modifier.weight(1f),
-            )
+        mainMetrics.chunked(2).forEach { rowMetrics ->
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                rowMetrics.forEach { id ->
+                    MetricTile(
+                        presentation = id.presentation(),
+                        value = snapshot.reading(id),
+                        points = history[id].orEmpty(),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            if (rowMetrics.size == 1) {
+                Spacer(Modifier.weight(1f))
+            }
         }
     }
 }
 
 @Composable
 private fun MetricTile(
-    icon: ImageVector,
-    tint: Color,
-    label: String,
-    unit: String,
+    presentation: MetricPresentation,
     value: ReadingValue?,
+    points: List<Double>,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -541,27 +517,20 @@ private fun MetricTile(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .background(tint.copy(alpha = 0.14f), CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = tint,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
+                TintedIconBadge(
+                    icon = presentation.icon,
+                    tint = presentation.tint,
+                    badgeSize = 30.dp,
+                    iconSize = 17.dp,
+                )
                 Text(
-                    text = label,
+                    text = stringResource(presentation.labelRes),
                     style = MaterialTheme.typography.labelSmall,
                     color = HomeTextSecondary,
                     maxLines = 1,
@@ -579,10 +548,32 @@ private fun MetricTile(
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    text = unit,
+                    text = stringResource(presentation.unitRes),
                     style = MaterialTheme.typography.labelMedium,
                     color = HomeTextSecondary,
                     modifier = Modifier.padding(bottom = 3.dp),
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                MetricSparkline(
+                    points = points,
+                    color = presentation.tint,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(30.dp),
+                )
+                Text(
+                    text = stringResource(
+                        R.string.metrics_min_max,
+                        formatMetricValue(presentation.range.start),
+                        formatMetricValue(presentation.range.endInclusive),
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = HomeTextSecondary,
+                    maxLines = 1,
                 )
             }
         }

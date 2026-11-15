@@ -25,7 +25,7 @@ sealed interface ConnectionConfigValidation {
     data class Invalid(val errors: ConnectionConfigErrors) : ConnectionConfigValidation
 }
 
-/** Validates the adapter host and TCP port entered on the vehicle setup screen. */
+/** Validates the adapter IPv4 address and TCP port entered on the vehicle setup screen. */
 object ConnectionConfigValidator {
 
     fun validate(host: String, port: String): ConnectionConfigValidation {
@@ -48,14 +48,7 @@ object ConnectionConfigValidator {
         )
     }
 
-    fun isValidHost(host: String): Boolean {
-        val trimmed = host.trim()
-        if (trimmed.isEmpty()) return false
-        // A numeric/dotted value is treated as an IPv4 address: a partial or out-of-range value
-        // must not silently pass as a hostname.
-        if (trimmed.all { it.isDigit() || it == '.' }) return IPV4_PATTERN.matches(trimmed)
-        return HOSTNAME_PATTERN.matches(trimmed)
-    }
+    fun isValidHost(host: String): Boolean = IPV4_PATTERN.matches(host.trim())
 
     private const val MIN_PORT = 1
     private const val MAX_PORT = 65_535
@@ -64,12 +57,5 @@ object ConnectionConfigValidator {
         Regex(
             "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}" +
                 "(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)$",
-        )
-
-    private val HOSTNAME_PATTERN =
-        Regex(
-            "^(?=.{1,253}$)" +
-                "([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)" +
-                "(\\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$",
         )
 }

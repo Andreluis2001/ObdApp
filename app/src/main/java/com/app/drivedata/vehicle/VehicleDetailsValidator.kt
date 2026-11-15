@@ -1,26 +1,21 @@
 package com.app.drivedata.vehicle
 
 import com.app.drivedata.vehicle.model.VehicleDetails
-import java.util.Calendar
 
 /** Raw form values, before trimming and normalization. */
 data class VehicleDetailsDraft(
     val make: String = "",
     val model: String = "",
-    val year: String = "",
     val licensePlate: String = "",
-    val nickname: String = "",
 )
 
 data class VehicleDetailsErrors(
     val make: Boolean = false,
     val model: Boolean = false,
-    val year: Boolean = false,
     val licensePlate: Boolean = false,
-    val nickname: Boolean = false,
 ) {
     val hasErrors: Boolean
-        get() = make || model || year || licensePlate || nickname
+        get() = make || model || licensePlate
 }
 
 sealed interface VehicleDetailsValidation {
@@ -32,33 +27,31 @@ sealed interface VehicleDetailsValidation {
 /** Validates and normalizes the vehicle information form. */
 object VehicleDetailsValidator {
 
-    const val MIN_YEAR = 1886
     const val MAX_NAME_LENGTH = 60
-    const val MAX_NICKNAME_LENGTH = 40
 
-    private val PLATE_PATTERN = Regex("[A-Z0-9]{6,8}")
+    const val MAX_PLATE_LENGTH = 7
 
-    fun validate(
-        draft: VehicleDetailsDraft,
-        maxYear: Int = currentYear() + 1,
-    ): VehicleDetailsValidation {
+    /** Legacy format: three letters followed by four digits, e.g. "ABC1234". */
+    private val LEGACY_PLATE_PATTERN = Regex("[A-Z]{3}[0-9]{4}")
+
+    /** Mercosul format: three letters, digit, letter, two digits, e.g. "RDE2R45". */
+    private val MERCOSUL_PLATE_PATTERN = Regex("[A-Z]{3}[0-9][A-Z][0-9]{2}")
+
+    fun validate(draft: VehicleDetailsDraft): VehicleDetailsValidation {
         val make = draft.make.trim()
         val model = draft.model.trim()
-        val nickname = draft.nickname.trim()
-        val yearText = draft.year.trim()
         val licensePlate = normalizePlate(draft.licensePlate)
 
-        val year = yearText.toIntOrNull()
-        val yearInvalid = yearText.isNotEmpty() && (year == null || year !in MIN_YEAR..maxYear)
-        val plateInvalid = licensePlate.isNotEmpty() && !PLATE_PATTERN.matches(licensePlate)
+        val plateInvalid =
+            licensePlate.isEmpty() ||
+                (!LEGACY_PLATE_PATTERN.matches(licensePlate) &&
+                    !MERCOSUL_PLATE_PATTERN.matches(licensePlate))
 
         val errors =
             VehicleDetailsErrors(
                 make = make.isEmpty() || make.length > MAX_NAME_LENGTH,
                 model = model.isEmpty() || model.length > MAX_NAME_LENGTH,
-                year = yearInvalid,
                 licensePlate = plateInvalid,
-                nickname = nickname.length > MAX_NICKNAME_LENGTH,
             )
         if (errors.hasErrors) return VehicleDetailsValidation.Invalid(errors)
 
@@ -66,16 +59,12 @@ object VehicleDetailsValidator {
             VehicleDetails(
                 make = make,
                 model = model,
-                year = year,
-                licensePlate = licensePlate.ifEmpty { null },
-                nickname = nickname.ifEmpty { null },
+                licensePlate = licensePlate,
             ),
         )
     }
 
-    /** Uppercases and removes separators so "abc-1234" becomes "ABC1234". */
+    /** Uppercases and keeps letters/digits only so "abc-1234" becomes "ABC1234". */
     fun normalizePlate(value: String): String =
-        value.trim().uppercase().filterNot { it.isWhitespace() || it == '-' }
-
-    private fun currentYear(): Int = Calendar.getInstance().get(Calendar.YEAR)
+        value.trim().uppercase().filter { it.isLetterOrDigit() }
 }

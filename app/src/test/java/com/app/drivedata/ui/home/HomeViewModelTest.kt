@@ -143,6 +143,7 @@ class HomeViewModelTest {
             vehicles = vehicles,
             connectionState = connection,
             collectionState = collection,
+            readingHistory = flowOf(emptyMap()),
             pendingCount = flowOf(12),
             rejectedCount = flowOf(3),
             lastSyncedAtMillis = flowOf(4_000L),

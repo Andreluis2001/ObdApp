@@ -15,12 +15,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Router
+import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -30,8 +30,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.drivedata.R
 import com.app.drivedata.ui.common.LightStatusBarIcons
+import com.app.drivedata.ui.common.PrimaryButton
+import com.app.drivedata.ui.common.SecondaryButton
 import com.app.drivedata.ui.common.formatDateTime
 import com.app.drivedata.ui.metrics.presentation
 import com.app.drivedata.ui.theme.HomeBackground
@@ -61,6 +61,8 @@ import com.app.drivedata.ui.vehicles.DiscoveredPid
 import com.app.drivedata.ui.vehicles.FormStep
 import com.app.drivedata.ui.vehicles.SetupStage
 import com.app.drivedata.ui.vehicles.VehicleSetupState
+import com.app.drivedata.ui.vehicles.components.DiscoveredPidRow
+import com.app.drivedata.ui.vehicles.components.FormTextField
 import com.app.drivedata.ui.vehicles.components.VehicleDetailsForm
 import com.app.drivedata.ui.vehicles.components.VehicleHeader
 import com.app.drivedata.ui.vehicles.labelRes
@@ -128,9 +130,7 @@ fun AddVehicleScreen(
                             errors = current.errors.details,
                             onMakeChange = viewModel::onMakeChange,
                             onModelChange = viewModel::onModelChange,
-                            onYearChange = viewModel::onYearChange,
                             onPlateChange = viewModel::onPlateChange,
-                            onNicknameChange = viewModel::onNicknameChange,
                             onContinue = viewModel::onContinue,
                         )
                     } else {
@@ -246,9 +246,7 @@ private fun VehicleFormStep(
     errors: VehicleDetailsErrors,
     onMakeChange: (String) -> Unit,
     onModelChange: (String) -> Unit,
-    onYearChange: (String) -> Unit,
     onPlateChange: (String) -> Unit,
-    onNicknameChange: (String) -> Unit,
     onContinue: () -> Unit,
 ) {
     SectionCard(title = stringResource(R.string.add_vehicle_step_vehicle)) {
@@ -257,9 +255,7 @@ private fun VehicleFormStep(
             errors = errors,
             onMakeChange = onMakeChange,
             onModelChange = onModelChange,
-            onYearChange = onYearChange,
             onPlateChange = onPlateChange,
-            onNicknameChange = onNicknameChange,
         )
         PrimaryButton(
             label = stringResource(R.string.add_vehicle_continue),
@@ -284,31 +280,24 @@ private fun AdapterFormStep(
             style = MaterialTheme.typography.bodySmall,
             color = HomeTextSecondary,
         )
-        OutlinedTextField(
+        FormTextField(
             value = connection.host,
             onValueChange = onHostChange,
-            singleLine = true,
-            label = { Text(stringResource(R.string.connection_host_label)) },
+            label = stringResource(R.string.connection_host_label),
+            icon = Icons.Filled.Router,
             isError = errors.host,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-            modifier = Modifier.fillMaxWidth(),
+            errorText = stringResource(R.string.failure_invalid_configuration),
+            keyboardType = KeyboardType.Uri,
         )
-        OutlinedTextField(
+        FormTextField(
             value = connection.port,
             onValueChange = onPortChange,
-            singleLine = true,
-            label = { Text(stringResource(R.string.connection_port_label)) },
+            label = stringResource(R.string.connection_port_label),
+            icon = Icons.Filled.SettingsEthernet,
             isError = errors.port,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
+            errorText = stringResource(R.string.failure_invalid_configuration),
+            keyboardType = KeyboardType.Number,
         )
-        if (errors.host || errors.port) {
-            Text(
-                text = stringResource(R.string.failure_invalid_configuration),
-                style = MaterialTheme.typography.bodySmall,
-                color = HomeRed,
-            )
-        }
         PrimaryButton(
             label = stringResource(R.string.add_vehicle_test_connection),
             onClick = onTestConnection,
@@ -362,7 +351,16 @@ private fun ReviewStep(
             )
         } else {
             review.pids.forEach { pid ->
-                DiscoveredPidRow(pid = pid, onToggle = onPidToggle)
+                DiscoveredPidRow(
+                    metricId = pid.metricId,
+                    pid = pid.pid,
+                    subtitle =
+                        stringResource(pid.metricId.presentation().unitRes) + " · " +
+                            stringResource(R.string.add_vehicle_pid_value, pid.pid),
+                    checked = pid.enabled,
+                    enabled = true,
+                    onToggle = onPidToggle,
+                )
             }
         }
         OutlinedButton(
@@ -384,51 +382,6 @@ private fun ReviewStep(
         PrimaryButton(
             label = stringResource(R.string.add_vehicle_save),
             onClick = onSave,
-        )
-    }
-}
-
-@Composable
-private fun DiscoveredPidRow(pid: DiscoveredPid, onToggle: (Int, Boolean) -> Unit) {
-    val presentation = pid.metricId.presentation()
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(38.dp)
-                    .background(presentation.tint.copy(alpha = 0.14f), CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = presentation.icon,
-                contentDescription = null,
-                tint = presentation.tint,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(presentation.labelRes),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = HomeTextPrimary,
-            )
-            Text(
-                text =
-                    stringResource(presentation.unitRes) +
-                        " · " +
-                        stringResource(R.string.add_vehicle_pid_value, pid.pid),
-                style = MaterialTheme.typography.labelSmall,
-                color = HomeTextSecondary,
-            )
-        }
-        Switch(
-            checked = pid.enabled,
-            onCheckedChange = { enabled -> onToggle(pid.pid, enabled) },
         )
     }
 }
@@ -556,25 +509,6 @@ private fun SectionCard(
             }
             content()
         }
-    }
-}
-
-@Composable
-private fun PrimaryButton(label: String, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = HomeBlue),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-        )
     }
 }
 

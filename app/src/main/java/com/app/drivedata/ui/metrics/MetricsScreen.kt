@@ -2,7 +2,6 @@ package com.app.drivedata.ui.metrics
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -40,13 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +51,8 @@ import com.app.drivedata.metrics.model.ReadingValue
 import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.ui.common.LightStatusBarIcons
+import com.app.drivedata.ui.common.MetricSparkline
+import com.app.drivedata.ui.common.TintedIconBadge
 import com.app.drivedata.ui.common.formatClockTime
 import com.app.drivedata.ui.common.formatDateTime
 import com.app.drivedata.ui.common.formatMetricValue
@@ -320,23 +314,12 @@ private fun MetricCard(
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .border(
-                        width = 2.dp,
-                        color = presentation.tint.copy(alpha = 0.45f),
-                        shape = CircleShape,
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = presentation.icon,
-                    contentDescription = null,
-                    tint = presentation.tint,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+            TintedIconBadge(
+                icon = presentation.icon,
+                tint = presentation.tint,
+                badgeSize = 42.dp,
+                iconSize = 20.dp,
+            )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -375,7 +358,7 @@ private fun MetricCard(
                 )
             }
             Spacer(Modifier.width(8.dp))
-            Sparkline(
+            MetricSparkline(
                 points = history,
                 color = presentation.tint,
                 modifier = Modifier
@@ -383,77 +366,6 @@ private fun MetricCard(
                     .height(38.dp),
             )
         }
-    }
-}
-
-@Composable
-private fun Sparkline(points: List<Double>, color: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        if (size.width <= 0f || size.height <= 0f) return@Canvas
-
-        if (points.size < 2) {
-            drawLine(
-                color = color.copy(alpha = 0.25f),
-                start = Offset(0f, size.height / 2f),
-                end = Offset(size.width, size.height / 2f),
-                strokeWidth = 1.5.dp.toPx(),
-                cap = StrokeCap.Round,
-            )
-            return@Canvas
-        }
-
-        val min = points.min()
-        val max = points.max()
-        val span = max - min
-        val stepX = size.width / points.lastIndex
-        val verticalPadding = 3.dp.toPx()
-        val usableHeight = (size.height - verticalPadding * 2f).coerceAtLeast(1f)
-
-        fun pointAt(index: Int): Offset {
-            val ratio =
-                if (span > 1e-9) ((points[index] - min) / span).toFloat() else 0.5f
-            return Offset(
-                x = index * stepX,
-                y = size.height - verticalPadding - ratio * usableHeight,
-            )
-        }
-
-        val linePath = Path().apply {
-            val first = pointAt(0)
-            moveTo(first.x, first.y)
-            for (index in 1..points.lastIndex) {
-                val point = pointAt(index)
-                lineTo(point.x, point.y)
-            }
-        }
-
-        val fillPath = Path().apply {
-            addPath(linePath)
-            lineTo(size.width, size.height)
-            lineTo(0f, size.height)
-            close()
-        }
-
-        drawPath(
-            path = fillPath,
-            brush = Brush.verticalGradient(
-                colors = listOf(color.copy(alpha = 0.22f), color.copy(alpha = 0f)),
-            ),
-        )
-        drawPath(
-            path = linePath,
-            color = color,
-            style = Stroke(
-                width = 1.5.dp.toPx(),
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round,
-            ),
-        )
-        drawCircle(
-            color = color,
-            radius = 2.5.dp.toPx(),
-            center = pointAt(points.lastIndex),
-        )
     }
 }
 

@@ -82,10 +82,8 @@ class VehicleRepository(
             VehicleEntity(
                 id = idGenerator(),
                 ownerUsername = owner,
-                nickname = details.nickname,
                 make = details.make,
                 model = details.model,
-                year = details.year,
                 licensePlate = details.licensePlate,
                 isActive = dao.countVehicles(owner) == 0,
                 createdAtMillis = now,
@@ -112,10 +110,8 @@ class VehicleRepository(
         if (!isOwned(vehicleId)) return false
         return dao.updateDetails(
             vehicleId = vehicleId,
-            nickname = details.nickname,
             make = details.make,
             model = details.model,
-            year = details.year,
             licensePlate = details.licensePlate,
             updatedAtMillis = clock(),
         ) > 0

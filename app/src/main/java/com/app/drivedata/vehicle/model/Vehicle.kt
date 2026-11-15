@@ -3,12 +3,10 @@ package com.app.drivedata.vehicle.model
 data class VehicleDetails(
     val make: String,
     val model: String,
-    val year: Int? = null,
     val licensePlate: String? = null,
-    val nickname: String? = null,
 ) {
     val displayName: String
-        get() = nickname?.takeIf { it.isNotBlank() } ?: "$make $model".trim()
+        get() = "$make $model".trim()
 }
 
 data class Vehicle(

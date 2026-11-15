@@ -29,10 +29,15 @@ class ConnectionConfigValidatorTest {
     }
 
     @Test
-    fun validHostname_isAccepted() {
+    fun hostnames_areRejected() {
+        val result =
+            ConnectionConfigValidator.validate(host = "elm327.local", port = "1")
+
         assertEquals(
-            ConnectionConfigValidation.Valid(ObdWifiConfig(host = "elm327.local", port = 1)),
-            ConnectionConfigValidator.validate(host = "elm327.local", port = "1"),
+            ConnectionConfigValidation.Invalid(
+                ConnectionConfigErrors(host = true, port = false),
+            ),
+            result,
         )
     }
 
@@ -95,5 +100,11 @@ class ConnectionConfigValidatorTest {
     fun hostnameWithUnderscoreOrLeadingHyphen_isRejected() {
         assertFalse(ConnectionConfigValidator.isValidHost("elm_327.local"))
         assertFalse(ConnectionConfigValidator.isValidHost("-elm327.local"))
+    }
+
+    @Test
+    fun emptyHost_isRejected() {
+        assertFalse(ConnectionConfigValidator.isValidHost(""))
+        assertFalse(ConnectionConfigValidator.isValidHost("   "))
     }
 }

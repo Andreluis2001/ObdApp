@@ -71,16 +71,14 @@ interface VehicleDao {
     }
 
     @Query(
-        "UPDATE vehicles SET nickname = :nickname, make = :make, model = :model, year = :year, " +
+        "UPDATE vehicles SET make = :make, model = :model, " +
             "license_plate = :licensePlate, updated_at_millis = :updatedAtMillis " +
             "WHERE id = :vehicleId",
     )
     suspend fun updateDetails(
         vehicleId: String,
-        nickname: String?,
         make: String,
         model: String,
-        year: Int?,
         licensePlate: String?,
         updatedAtMillis: Long,
     ): Int

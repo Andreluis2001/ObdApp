@@ -2,7 +2,9 @@ package com.app.drivedata.metrics
 
 import com.app.drivedata.auth.AuthSession
 import com.app.drivedata.logging.AppLog
+import com.app.drivedata.metrics.model.MetricId
 import com.app.drivedata.metrics.model.MetricsSnapshot
+import com.app.drivedata.metrics.model.ReadingValue
 import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
 import kotlinx.coroutines.CancellationException
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.IOException
 
@@ -40,6 +43,14 @@ class MetricsCollectionController(
 
     private val _state = MutableStateFlow(MetricsCollectionState())
     val state: StateFlow<MetricsCollectionState> = _state.asStateFlow()
+
+    private val _history = MutableStateFlow<Map<MetricId, List<Double>>>(emptyMap())
+
+    /**
+     * Recent readings per metric, accumulated while a collection session is running.
+     * Shared by every screen that draws sparklines so they all see the same series.
+     */
+    val history: StateFlow<Map<MetricId, List<Double>>> = _history.asStateFlow()
 
     private var collectionJob: Job? = null
 
@@ -98,6 +109,7 @@ class MetricsCollectionController(
         if (vehicle?.vehicleId != lastVehicleId) {
             lastVehicleId = vehicle?.vehicleId
             clearSnapshot()
+            clearHistory()
         }
 
         if (!isCollectible(connection, vehicle)) {
@@ -105,6 +117,7 @@ class MetricsCollectionController(
             stopInternal()
             runningConfig = null
             clearSnapshot()
+            clearHistory()
             return
         }
 
@@ -147,6 +160,7 @@ class MetricsCollectionController(
                     streamFactory(vehicle.catalog).collect { snapshot ->
                         persist(snapshot)
                         _state.value = _state.value.copy(snapshot = snapshot)
+                        _history.update { current -> current.appendedWith(snapshot) }
                         AppLog.d(
                             "Metrics snapshot applied to UI: ${snapshot.readings.size} readings, " +
                                 "timestamp=${snapshot.timestampMillis}",
@@ -181,6 +195,10 @@ class MetricsCollectionController(
         }
     }
 
+    private fun clearHistory() {
+        _history.value = emptyMap()
+    }
+
     private suspend fun persist(snapshot: MetricsSnapshot) {
         val owner = authSession.signedInUser.value
         if (owner == null) {
@@ -212,4 +230,19 @@ private fun isCollectible(
     if (connection !is ObdConnectionState.Connected) return false
     if (connection.ecuStatus != EcuStatus.VERIFIED) return false
     return vehicle.matches(connection.config)
+}
+
+private const val MAX_HISTORY_POINTS = 40
+
+private fun Map<MetricId, List<Double>>.appendedWith(
+    snapshot: MetricsSnapshot,
+): Map<MetricId, List<Double>> {
+    val updated = HashMap<MetricId, List<Double>>(size + snapshot.readings.size)
+    updated.putAll(this)
+    snapshot.readings.forEach { reading ->
+        val available = reading.value as? ReadingValue.Available ?: return@forEach
+        updated[reading.id] =
+            (updated[reading.id].orEmpty() + available.value).takeLast(MAX_HISTORY_POINTS)
+    }
+    return updated
 }

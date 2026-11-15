@@ -12,15 +12,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Router
+import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +41,7 @@ import com.app.drivedata.ui.theme.HomeRed
 import com.app.drivedata.ui.theme.HomeSurface
 import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
+import com.app.drivedata.ui.vehicles.components.FormTextField
 import com.app.drivedata.ui.vehicles.components.VehicleDetailsForm
 import com.app.drivedata.ui.vehicles.components.VehicleErrorBanner
 import com.app.drivedata.ui.vehicles.components.VehicleHeader
@@ -113,9 +115,7 @@ fun EditVehicleScreen(
                             errors = state.errors.details,
                             onMakeChange = viewModel::onMakeChange,
                             onModelChange = viewModel::onModelChange,
-                            onYearChange = viewModel::onYearChange,
                             onPlateChange = viewModel::onPlateChange,
-                            onNicknameChange = viewModel::onNicknameChange,
                         )
                     }
 
@@ -125,31 +125,23 @@ fun EditVehicleScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = HomeTextSecondary,
                         )
-                        OutlinedTextField(
+                        FormTextField(
                             value = state.connection.host,
                             onValueChange = viewModel::onHostChange,
-                            singleLine = true,
-                            label = { Text(stringResource(R.string.connection_host_label)) },
+                            label = stringResource(R.string.connection_host_label),
+                            icon = Icons.Filled.Router,
                             isError = state.errors.connection.host,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                            modifier = Modifier.fillMaxWidth(),
+                            errorText = stringResource(R.string.failure_invalid_configuration),
                         )
-                        OutlinedTextField(
+                        FormTextField(
                             value = state.connection.port,
                             onValueChange = viewModel::onPortChange,
-                            singleLine = true,
-                            label = { Text(stringResource(R.string.connection_port_label)) },
+                            label = stringResource(R.string.connection_port_label),
+                            icon = Icons.Filled.SettingsEthernet,
                             isError = state.errors.connection.port,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth(),
+                            errorText = stringResource(R.string.failure_invalid_configuration),
+                            keyboardType = KeyboardType.Number,
                         )
-                        if (state.errors.connection.host || state.errors.connection.port) {
-                            Text(
-                                text = stringResource(R.string.failure_invalid_configuration),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = HomeRed,
-                            )
-                        }
                     }
 
                     Button(

@@ -19,11 +19,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Router
+import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Settings
@@ -37,7 +38,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -63,6 +63,7 @@ import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.obd.model.ObdWifiConfig
 import com.app.drivedata.ui.common.LightStatusBarIcons
+import com.app.drivedata.ui.common.StatusLabel
 import com.app.drivedata.ui.common.formatDateTime
 import com.app.drivedata.ui.metrics.presentation
 import com.app.drivedata.ui.theme.HomeBackground
@@ -75,6 +76,7 @@ import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
 import com.app.drivedata.ui.theme.LoginBackgroundTop
 import com.app.drivedata.ui.theme.LoginTextMuted
+import com.app.drivedata.ui.vehicles.components.FormTextField
 
 private enum class ConnectionDialog { PAIR, PIDS, PROTOCOL }
 
@@ -309,20 +311,10 @@ private fun AdapterCard(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(9.dp)
-                                .background(statusColor, CircleShape),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = connection.statusLabel(),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = statusColor,
-                        )
-                    }
+                    StatusLabel(
+                        color = statusColor,
+                        label = connection.statusLabel(),
+                    )
                     Text(
                         text = stringResource(R.string.connection_adapter_name),
                         style = MaterialTheme.typography.bodyMedium,
@@ -468,21 +460,22 @@ private fun PairDeviceDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = HomeTextSecondary,
                 )
-                OutlinedTextField(
+                FormTextField(
                     value = host,
                     onValueChange = onHostChange,
-                    singleLine = true,
-                    label = { Text(stringResource(R.string.connection_host_label)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    modifier = Modifier.fillMaxWidth(),
+                    label = stringResource(R.string.connection_host_label),
+                    icon = Icons.Filled.Router,
+                    isError = false,
+                    errorText = "",
                 )
-                OutlinedTextField(
+                FormTextField(
                     value = port,
                     onValueChange = onPortChange,
-                    singleLine = true,
-                    label = { Text(stringResource(R.string.connection_port_label)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
+                    label = stringResource(R.string.connection_port_label),
+                    icon = Icons.Filled.SettingsEthernet,
+                    isError = false,
+                    errorText = "",
+                    keyboardType = KeyboardType.Number,
                 )
                 if (!isValid) {
                     Text(

@@ -87,9 +87,7 @@
     <string name="home_connected">Veículo conectado</string>
     <string name="home_disconnected">Veículo desconectado</string>
     <string name="home_collecting">Coleta ativa</string>
-    <string name="home_sending">Enviando dados</string>
     <string name="home_idle">Coleta parada</string>
-    <string name="home_waiting">Aguardando conexão</string>
     <string name="home_main_parameters">Principais parâmetros (OBD-II)</string>
     <string name="home_see_all_parameters">Ver todos os parâmetros</string>
     <string name="home_connection_status">Status da conexão</string>
@@ -101,8 +99,6 @@
     <string name="home_pending_value">%1$d registros (~%2$s)</string>
     <string name="home_rejected_data">Registros rejeitados</string>
     <string name="home_rejected_value">%1$d registros</string>
-    <string name="home_sync_now">Sincronizar agora</string>
-    <string name="home_sync_in_progress">Sincronizando\u2026</string>
     <string name="home_sync_error_network">Sem conexão com o servidor. Os dados serão enviados depois.</string>
     <string name="home_sync_error_auth">Sessão inválida. Entre novamente para sincronizar.</string>
     <string name="home_sync_error_server">O servidor rejeitou o envio. Os registros foram mantidos.</string>
@@ -190,8 +186,6 @@
     <string name="vehicle_last_ecu">Última comunicação com a ECU</string>
     <string name="vehicle_never">Nunca</string>
     <string name="vehicle_today">Hoje, %1$s</string>
-    <string name="vehicle_year_value">%1$d</string>
-    <string name="vehicle_year_plate_value">%1$d \u2022 %2$s</string>
     <string name="vehicle_error_delete">Não foi possível remover o veículo. Tente novamente.</string>
     <string name="vehicle_error_activate">Não foi possível definir o veículo ativo. Tente novamente.</string>
     <string name="vehicle_details_open">Detalhes</string>
@@ -200,9 +194,6 @@
     <string name="vehicle_details_info">Veículo</string>
     <string name="vehicle_details_adapter">Adaptador</string>
     <string name="vehicle_details_capabilities">Parâmetros suportados</string>
-    <string name="vehicle_details_actions">Ações</string>
-    <string name="vehicle_details_nickname">Apelido</string>
-    <string name="vehicle_details_year">Ano</string>
     <string name="vehicle_details_plate">Placa</string>
     <string name="vehicle_details_last_connection">Última conexão com o adaptador</string>
     <string name="vehicle_details_no_capabilities">Nenhum parâmetro descoberto para este veículo. Conecte o adaptador e redescubra os parâmetros suportados.</string>
@@ -232,14 +223,12 @@
     <string name="add_vehicle_step_parameters">Parâmetros</string>
     <string name="vehicle_make_label">Marca</string>
     <string name="vehicle_model_label">Modelo</string>
-    <string name="vehicle_year_label">Ano (opcional)</string>
-    <string name="vehicle_plate_label">Placa (opcional)</string>
-    <string name="vehicle_nickname_label">Apelido (opcional)</string>
+    <string name="form_section_identification">Identificação do veículo</string>
+    <string name="vehicle_plate_label">Placa</string>
     <string name="vehicle_error_make">Informe a marca do veículo.</string>
     <string name="vehicle_error_model">Informe o modelo do veículo.</string>
-    <string name="vehicle_error_year">Informe um ano válido.</string>
-    <string name="vehicle_error_plate">Informe uma placa válida com 6 a 8 caracteres.</string>
-    <string name="vehicle_error_nickname">O apelido deve ter no máximo %1$d caracteres.</string>
+    <string name="vehicle_error_plate_required">A placa é obrigatória.</string>
+    <string name="vehicle_error_plate_invalid">Placa inválida. Use o formato ABC1234 ou ABC1D23.</string>
     <string name="add_vehicle_continue">Continuar</string>
     <string name="add_vehicle_test_connection">Testar conexão e descobrir parâmetros</string>
     <string name="add_vehicle_save_without_test">Salvar sem testar</string>

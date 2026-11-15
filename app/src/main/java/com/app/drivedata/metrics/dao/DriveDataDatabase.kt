@@ -22,7 +22,7 @@ import com.app.drivedata.vehicle.entity.VehicleEntity
         Elm327ConnectionEntity::class,
         SupportedPidEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class DriveDataDatabase : RoomDatabase() {
@@ -149,12 +149,50 @@ abstract class DriveDataDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Drops the nickname and year vehicle columns. SQLite on the minimum supported SDK cannot
+         * drop columns, so the vehicles table is recreated and its rows copied over. Foreign key
+         * enforcement is deferred for the duration of the migration transaction, allowing the
+         * parent table to be dropped while the connection/PID child tables still reference it.
+         */
+        internal val MIGRATION_4_5 =
+            object : Migration(4, 5) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("PRAGMA defer_foreign_keys = TRUE")
+                    db.execSQL(
+                        "CREATE TABLE `vehicles_new` (" +
+                            "`id` TEXT NOT NULL, " +
+                            "`owner_username` TEXT NOT NULL, " +
+                            "`make` TEXT NOT NULL, " +
+                            "`model` TEXT NOT NULL, " +
+                            "`license_plate` TEXT, " +
+                            "`is_active` INTEGER NOT NULL DEFAULT 0, " +
+                            "`created_at_millis` INTEGER NOT NULL, " +
+                            "`updated_at_millis` INTEGER NOT NULL, " +
+                            "PRIMARY KEY(`id`))",
+                    )
+                    db.execSQL(
+                        "INSERT INTO `vehicles_new` " +
+                            "(`id`, `owner_username`, `make`, `model`, `license_plate`, " +
+                            "`is_active`, `created_at_millis`, `updated_at_millis`) " +
+                            "SELECT `id`, `owner_username`, `make`, `model`, `license_plate`, " +
+                            "`is_active`, `created_at_millis`, `updated_at_millis` FROM `vehicles`",
+                    )
+                    db.execSQL("DROP TABLE `vehicles`")
+                    db.execSQL("ALTER TABLE `vehicles_new` RENAME TO `vehicles`")
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_vehicles_owner_active` " +
+                            "ON `vehicles` (`owner_username`, `is_active`)",
+                    )
+                }
+            }
+
         fun build(context: Context): DriveDataDatabase =
             Room.databaseBuilder(
                 context.applicationContext,
                 DriveDataDatabase::class.java,
                 DATABASE_NAME,
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
     }
 }
