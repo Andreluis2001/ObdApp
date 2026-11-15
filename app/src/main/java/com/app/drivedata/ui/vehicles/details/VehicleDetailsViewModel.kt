@@ -12,10 +12,10 @@ import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.obd.model.ObdWifiConfig
 import com.app.drivedata.obd.model.PidDiscoveryResult
-import com.app.drivedata.ui.vehicles.SetupFailure
-import com.app.drivedata.ui.vehicles.SetupStage
-import com.app.drivedata.ui.vehicles.setupStage
-import com.app.drivedata.ui.vehicles.toSetupFailure
+import com.app.drivedata.ui.discovery.SetupFailure
+import com.app.drivedata.ui.discovery.SetupStage
+import com.app.drivedata.ui.discovery.setupStage
+import com.app.drivedata.ui.discovery.toSetupFailure
 import com.app.drivedata.vehicle.VehicleRepository
 import com.app.drivedata.vehicle.model.Vehicle
 import kotlinx.coroutines.CancellationException

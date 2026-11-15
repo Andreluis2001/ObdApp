@@ -20,6 +20,18 @@ data class Vehicle(
     val createdAtMillis: Long,
     val updatedAtMillis: Long,
 ) {
+    /**
+     * Name shown across the app.
+     *
+     * VIN-discovered vehicles have no model, so their name comes from the decoded identity
+     * (manufacturer + serial, falling back to the VIN). Legacy vehicles with a user-provided model
+     * keep the name that was entered.
+     */
     val displayName: String
-        get() = details.displayName
+        get() =
+            when {
+                details.model.isNotBlank() -> details.displayName
+                identity != null -> identity.displayName
+                else -> details.displayName.ifBlank { details.licensePlate.orEmpty() }
+            }
 }

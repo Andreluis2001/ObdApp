@@ -16,11 +16,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,7 +41,6 @@ import com.app.drivedata.vehicle.model.Vehicle
 fun VehicleCard(
     vehicle: Vehicle,
     onOpenDetails: () -> Unit,
-    onEdit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val active = vehicle.isActive
@@ -121,14 +118,6 @@ fun VehicleCard(
                         modifier = Modifier.size(20.dp),
                     )
                 }
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        imageVector = Icons.Filled.Edit,
-                        contentDescription = stringResource(R.string.vehicle_details_edit),
-                        tint = HomeBlue,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
             }
         }
     }
@@ -136,4 +125,4 @@ fun VehicleCard(
 
 @Composable
 private fun vehicleSubtitle(vehicle: Vehicle): String? =
-    vehicle.details.licensePlate
+    vehicle.details.licensePlate ?: vehicle.identity?.vin

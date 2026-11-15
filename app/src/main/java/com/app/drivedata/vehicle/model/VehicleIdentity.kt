@@ -10,4 +10,11 @@ data class VehicleIdentity(
     val vin: String,
     val manufacturer: String?,
     val serialNumber: String?,
-)
+) {
+    /**
+     * Human-readable name built from the decoded values. The serial number identifies a single
+     * vehicle, while the VIN is used when the serial number could not be decoded.
+     */
+    val displayName: String
+        get() = listOfNotNull(manufacturer, serialNumber ?: vin).joinToString(" ").trim()
+}

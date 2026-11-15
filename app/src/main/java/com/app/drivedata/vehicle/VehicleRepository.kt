@@ -64,6 +64,17 @@ class VehicleRepository(
         }
 
     /**
+     * Finds an owned vehicle by its decoded serial number or raw VIN. Returns `null` when the key
+     * is blank or no vehicle matches, so discovery can safely create a new record.
+     */
+    suspend fun findByIdentityKey(identityKey: String): Vehicle? {
+        val owner = currentOwner() ?: return null
+        if (identityKey.isBlank()) return null
+        val entity = dao.findVehicleByIdentityKey(owner, identityKey) ?: return null
+        return entity.toVehicle(dao.findConnection(entity.id), dao.supportedPids(entity.id))
+    }
+
+    /**
      * Inserts a vehicle, activating it when it is the owner's first one. [connection] is stored only
      * when it has a usable host and port.
      *
@@ -109,17 +120,6 @@ class VehicleRepository(
                 .orEmpty()
         dao.insertVehicle(vehicle, connectionEntity, pidEntities)
         return vehicle.toVehicle(connectionEntity, pidEntities)
-    }
-
-    suspend fun updateDetails(vehicleId: String, details: VehicleDetails): Boolean {
-        if (!isOwned(vehicleId)) return false
-        return dao.updateDetails(
-            vehicleId = vehicleId,
-            make = details.make,
-            model = details.model,
-            licensePlate = details.licensePlate,
-            updatedAtMillis = clock(),
-        ) > 0
     }
 
     suspend fun setActive(vehicleId: String): Boolean {

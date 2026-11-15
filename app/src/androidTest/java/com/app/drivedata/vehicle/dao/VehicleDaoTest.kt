@@ -139,6 +139,41 @@ class VehicleDaoTest {
             assertEquals("P26082", stored?.serialNumber)
         }
 
+    @Test
+    fun findVehicleByIdentityKey_matchesSerialOrVinForTheOwner() =
+        runBlocking {
+            dao.insertVehicle(
+                vehicle(
+                    "v1",
+                    identity =
+                        VehicleIdentity(
+                            vin = "WBA3A5G59DNP26082",
+                            manufacturer = "BMW",
+                            serialNumber = "P26082",
+                        ),
+                ),
+                null,
+            )
+            dao.insertVehicle(
+                vehicle(
+                    "v2",
+                    owner = "other",
+                    identity =
+                        VehicleIdentity(
+                            vin = "9BWZZZ377VT004251",
+                            manufacturer = "Volkswagen",
+                            serialNumber = "T004251",
+                        ),
+                ),
+                null,
+            )
+
+            assertEquals("v1", dao.findVehicleByIdentityKey("admin", "P26082")?.id)
+            assertEquals("v1", dao.findVehicleByIdentityKey("admin", "WBA3A5G59DNP26082")?.id)
+            assertNull(dao.findVehicleByIdentityKey("admin", "T004251"))
+            assertNull(dao.findVehicleByIdentityKey("admin", "missing"))
+        }
+
     private fun vehicle(
         id: String,
         owner: String = "admin",

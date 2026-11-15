@@ -15,20 +15,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,9 +46,7 @@ import com.app.drivedata.ui.vehicles.components.VehicleHeader
 fun VehicleListScreen(
     viewModel: VehicleListViewModel,
     onBack: () -> Unit,
-    onAddVehicle: () -> Unit,
     onOpenVehicle: (String) -> Unit,
-    onEditVehicle: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -68,15 +63,6 @@ fun VehicleListScreen(
             title = stringResource(R.string.vehicles_title),
             subtitle = stringResource(R.string.vehicles_subtitle),
             onBack = onBack,
-            actions = {
-                IconButton(onClick = onAddVehicle) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = stringResource(R.string.vehicle_add),
-                        tint = Color.White,
-                    )
-                }
-            },
         )
 
         Column(
@@ -113,7 +99,6 @@ fun VehicleListScreen(
                         VehicleCard(
                             vehicle = vehicle,
                             onOpenDetails = { onOpenVehicle(vehicle.id) },
-                            onEdit = { onEditVehicle(vehicle.id) },
                         )
                     }
             }
