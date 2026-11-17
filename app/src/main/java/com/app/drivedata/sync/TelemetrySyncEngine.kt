@@ -3,8 +3,9 @@ package com.app.drivedata.sync
 import com.app.drivedata.api.BatchUploadRequest
 import com.app.drivedata.api.BatchUploadResponse
 import com.app.drivedata.api.TelemetryApi
-import com.app.drivedata.api.TelemetryReadingDto
 import com.app.drivedata.api.TelemetryRecordDto
+import com.app.drivedata.api.TelemetryReadingDto
+import com.app.drivedata.auth.RefreshResult
 import com.app.drivedata.logging.AppLog
 import com.app.drivedata.metrics.MetricsRepository
 import com.app.drivedata.metrics.dao.MetricRecordDao
@@ -31,6 +32,8 @@ class TelemetrySyncEngine(
     private val api: TelemetryApi,
     private val clock: () -> Long = System::currentTimeMillis,
     private val retentionMillis: Long = MetricsRepository.DEFAULT_RETENTION_MILLIS,
+    private val refreshAuth: suspend () -> RefreshResult = { RefreshResult.ReauthenticationRequired },
+    private val onReauthenticationRequired: suspend () -> Unit = {},
 ) {
 
     private val mutex = Mutex()
@@ -78,46 +81,64 @@ class TelemetrySyncEngine(
             )
             if (batch.isEmpty()) break
 
-            val batchIds = batch.map { it.record.id }.toSet()
-            when (val outcome = upload(batch, ownerUsername)) {
-                is UploadOutcome.Processed -> {
-                    val acknowledged = outcome.response.acknowledgedIds.filter { it in batchIds }.distinct()
-                    val rejectedRecords = outcome.response.rejected.filter { it.id in batchIds }
+            // The backend requires a VIN; a locally unusable record must not block the whole batch.
+            val withoutVin = batch.filter { it.record.vin.isNullOrBlank() }
+            if (withoutVin.isNotEmpty()) {
+                dao.markRejected(
+                    ids = withoutVin.map { it.record.id },
+                    rejectedStatus = UploadStatus.REJECTED,
+                    pendingStatus = UploadStatus.PENDING,
+                    error = "missing vin",
+                )
+                rejected += withoutVin.size
+            }
 
-                    if (acknowledged.isEmpty() && rejectedRecords.isEmpty()) {
+            val sendable = batch.filterNot { it.record.vin.isNullOrBlank() }
+            if (sendable.isEmpty()) continue
+
+            val batchIds = sendable.map { it.record.id }.toSet()
+            when (val outcome = upload(sendable, canRefresh = true)) {
+                is UploadOutcome.Processed -> {
+                    val rejectedRecords = outcome.response.rejected.filter { it.id in batchIds }
+                    val rejectedIds = rejectedRecords.map { it.id }.toSet()
+
+                    if (rejectedIds.isNotEmpty()) {
+                        rejectedRecords.forEach { record ->
+                            dao.markRejected(
+                                ids = listOf(record.id),
+                                rejectedStatus = UploadStatus.REJECTED,
+                                pendingStatus = UploadStatus.PENDING,
+                                error = record.reasonText(),
+                            )
+                        }
+                        rejected += rejectedIds.size
+                    }
+
+                    val acknowledged = batchIds - rejectedIds
+                    if (outcome.response.accepted != acknowledged.size) {
+                        val reason =
+                            "server acknowledged ${outcome.response.accepted} of ${batchIds.size} records"
                         dao.recordAttemptFailure(
-                            ids = batchIds.toList(),
+                            ids = acknowledged.toList(),
                             pendingStatus = UploadStatus.PENDING,
-                            error = "server returned no acknowledgement",
+                            error = reason,
                         )
-                        return SyncRunResult.Retryable(
-                            "server returned no acknowledgement",
-                            SyncError.SERVER,
-                        )
+                        return SyncRunResult.Retryable(reason, SyncError.SERVER)
                     }
 
                     if (acknowledged.isNotEmpty()) {
                         dao.markUploaded(
-                            ids = acknowledged,
+                            ids = acknowledged.toList(),
                             status = UploadStatus.UPLOADED,
                             pendingStatus = UploadStatus.PENDING,
                             uploadedAtMillis = clock(),
                         )
-                    }
-                    rejectedRecords.forEach { record ->
-                        dao.markRejected(
-                            ids = listOf(record.id),
-                            rejectedStatus = UploadStatus.REJECTED,
-                            pendingStatus = UploadStatus.PENDING,
-                            error = record.reason(),
-                        )
+                        uploaded += acknowledged.size
                     }
 
-                    uploaded += acknowledged.size
-                    rejected += rejectedRecords.size
                     AppLog.i(
-                        "Telemetry batch processed: acked=${acknowledged.size}, " +
-                            "rejected=${rejectedRecords.size}, pendingBefore=${batch.size}",
+                        "Telemetry batch processed: acknowledged=${acknowledged.size}, " +
+                            "rejected=${rejectedIds.size}, sent=${batchIds.size}",
                     )
                 }
 
@@ -132,6 +153,15 @@ class TelemetrySyncEngine(
                 }
 
                 is UploadOutcome.Failed -> {
+                    if (outcome.rejectRecords) {
+                        dao.markRejected(
+                            ids = batchIds.toList(),
+                            rejectedStatus = UploadStatus.REJECTED,
+                            pendingStatus = UploadStatus.PENDING,
+                            error = outcome.reason,
+                        )
+                        rejected += batchIds.size
+                    }
                     AppLog.e("Telemetry batch failed permanently: ${outcome.reason}")
                     return SyncRunResult.Failed(outcome.reason, outcome.error)
                 }
@@ -143,33 +173,51 @@ class TelemetrySyncEngine(
 
     private suspend fun upload(
         batch: List<MetricRecordWithReadings>,
-        ownerUsername: String,
+        canRefresh: Boolean,
     ): UploadOutcome =
         try {
             val request =
                 BatchUploadRequest(
-                    records = batch.map { it.toRecord().toDto(ownerUsername) },
+                    records = batch.map { it.toRecord().toDto() },
                 )
             UploadOutcome.Processed(api.uploadBatch(request))
         } catch (error: CancellationException) {
             throw error
         } catch (error: HttpException) {
-            error.toOutcome()
+            if (error.code() == 401 && canRefresh) {
+                when (refreshAuth()) {
+                    RefreshResult.Refreshed -> upload(batch, canRefresh = false)
+                    RefreshResult.ReauthenticationRequired -> {
+                        onReauthenticationRequired()
+                        UploadOutcome.Failed("authentication expired", SyncError.AUTH)
+                    }
+                    RefreshResult.Unavailable ->
+                        UploadOutcome.Retryable("token refresh failed", SyncError.NETWORK)
+                }
+            } else {
+                error.toOutcome()
+            }
         } catch (error: IOException) {
             UploadOutcome.Retryable("network failure: ${error.message}", SyncError.NETWORK)
         } catch (error: Exception) {
             UploadOutcome.Retryable("unexpected upload failure: ${error.message}", SyncError.UNKNOWN)
         }
 
-    private fun HttpException.toOutcome(): UploadOutcome =
+    private suspend fun HttpException.toOutcome(): UploadOutcome =
         when (code()) {
-            401, 403 -> UploadOutcome.Failed("authentication rejected (HTTP ${code()})", SyncError.AUTH)
-            408, 429, 500, 502, 503, 504 ->
-                UploadOutcome.Retryable("temporary server failure (HTTP ${code()})", SyncError.SERVER)
-            in 500..599 ->
-                UploadOutcome.Retryable("server failure (HTTP ${code()})", SyncError.SERVER)
+            401 -> {
+                onReauthenticationRequired()
+                UploadOutcome.Failed("authentication rejected (HTTP 401)", SyncError.AUTH)
+            }
+            403 -> UploadOutcome.Failed("access denied (HTTP 403)", SyncError.AUTH)
+            408, 429 -> UploadOutcome.Retryable("temporary server failure (HTTP ${code()})", SyncError.SERVER)
+            in 500..599 -> UploadOutcome.Retryable("server failure (HTTP ${code()})", SyncError.SERVER)
             in 400..499 ->
-                UploadOutcome.Failed("request rejected by the server (HTTP ${code()})", SyncError.SERVER)
+                UploadOutcome.Failed(
+                    "request rejected by the server (HTTP ${code()})",
+                    SyncError.SERVER,
+                    rejectRecords = true,
+                )
             else -> UploadOutcome.Retryable("unexpected HTTP ${code()}", SyncError.SERVER)
         }
 
@@ -178,16 +226,19 @@ class TelemetrySyncEngine(
 
         data class Retryable(val reason: String, val error: SyncError) : UploadOutcome
 
-        data class Failed(val reason: String, val error: SyncError) : UploadOutcome
+        data class Failed(
+            val reason: String,
+            val error: SyncError,
+            val rejectRecords: Boolean = false,
+        ) : UploadOutcome
     }
 }
 
-private fun MetricRecord.toDto(ownerUsername: String): TelemetryRecordDto =
+private fun MetricRecord.toDto(): TelemetryRecordDto =
     TelemetryRecordDto(
         id = id,
-        vin = vin,
+        vin = vin.orEmpty(),
         collectedAt = formatUtc(collectedAtMillis),
-        user = ownerUsername,
         readings = readings.map { reading ->
             TelemetryReadingDto(
                 metric = reading.id.wireName,

@@ -11,9 +11,8 @@ data class BatchUploadRequest(
 @Serializable
 data class TelemetryRecordDto(
     val id: String,
-    val vin: String? = null,
+    val vin: String,
     @SerialName("collected_at") val collectedAt: String,
-    val user: String? = null,
     val readings: List<TelemetryReadingDto>,
 )
 
@@ -27,20 +26,18 @@ data class TelemetryReadingDto(
 
 @Serializable
 data class BatchUploadResponse(
-    val accepted: List<String> = emptyList(),
-    val duplicates: List<String> = emptyList(),
+    @SerialName("batch_id") val batchId: String? = null,
+    @SerialName("received_at") val receivedAt: String = "",
+    val accepted: Int,
     val rejected: List<RejectedRecordDto> = emptyList(),
-) {
-    val acknowledgedIds: List<String>
-        get() = accepted + duplicates
-}
+)
 
 @Serializable
 data class RejectedRecordDto(
+    val index: Int? = null,
     val id: String,
-    val code: String? = null,
-    val message: String? = null,
+    val vin: String? = null,
+    val reason: String = "",
 ) {
-    fun reason(): String =
-        listOfNotNull(code, message).joinToString(": ").ifBlank { "record rejected by the server" }
+    fun reasonText(): String = reason.ifBlank { "record rejected by the server" }
 }

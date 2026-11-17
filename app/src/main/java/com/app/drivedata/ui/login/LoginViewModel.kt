@@ -7,7 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.app.drivedata.DriveDataApplication
 import com.app.drivedata.auth.AuthSession
-import com.app.drivedata.auth.UserRepository
+import com.app.drivedata.auth.LoginResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -32,7 +32,6 @@ data class LoginUiState(
 }
 
 class LoginViewModel(
-    private val usersRepository: UserRepository,
     private val authSession: AuthSession,
 ) : ViewModel() {
 
@@ -76,14 +75,13 @@ class LoginViewModel(
         error.value = null
         viewModelScope.launch {
             try {
-                if (usersRepository.authenticate(enteredUsername, enteredPassword)) {
-                    password.value = ""
-                    authSession.signIn(enteredUsername)
-                } else {
-                    error.value = LoginError.INVALID_CREDENTIALS
+                when (authSession.login(enteredUsername, enteredPassword)) {
+                    LoginResult.SUCCESS -> password.value = ""
+                    LoginResult.INVALID_CREDENTIALS -> error.value = LoginError.INVALID_CREDENTIALS
+                    LoginResult.UNAVAILABLE -> error.value = LoginError.UNEXPECTED
                 }
-            } catch (e: CancellationException) {
-                throw e
+            } catch (cancellation: CancellationException) {
+                throw cancellation
             } catch (_: Exception) {
                 error.value = LoginError.UNEXPECTED
             } finally {
@@ -98,10 +96,7 @@ class LoginViewModel(
         fun factory(application: DriveDataApplication): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
-                    LoginViewModel(
-                        usersRepository = application.container.usersRepository,
-                        authSession = application.container.authSession,
-                    )
+                    LoginViewModel(authSession = application.container.authSession)
                 }
             }
     }

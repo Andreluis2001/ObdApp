@@ -7,6 +7,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Wifi
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -32,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -93,7 +96,18 @@ private enum class VehicleRoute { DETAILS }
 private fun DriveDataApp() {
     val application = LocalContext.current.applicationContext as DriveDataApplication
     val authSession = application.container.authSession
+    val isReady by authSession.isReady.collectAsStateWithLifecycle()
     val signedInUser by authSession.signedInUser.collectAsStateWithLifecycle()
+
+    if (!isReady) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(HomeBackground),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(color = HomeBlue)
+        }
+        return
+    }
 
     if (signedInUser == null) {
         val loginViewModel: LoginViewModel =

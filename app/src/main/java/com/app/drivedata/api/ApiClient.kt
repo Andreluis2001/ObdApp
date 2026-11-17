@@ -16,6 +16,7 @@ class ApiClient(
 ) {
 
     val telemetryApi: TelemetryApi
+    val authApi: AuthApi
 
     init {
         val normalizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
@@ -32,16 +33,17 @@ class ApiClient(
                 .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .addInterceptor { chain ->
+                    val request = chain.request()
                     val token = tokenProvider.currentToken()
-                    val request =
-                        if (token.isNullOrBlank()) {
-                            chain.request()
+                    val authorized =
+                        if (token.isNullOrBlank() || request.header("Authorization") != null) {
+                            request
                         } else {
-                            chain.request().newBuilder()
+                            request.newBuilder()
                                 .header("Authorization", "Bearer $token")
                                 .build()
                         }
-                    chain.proceed(request)
+                    chain.proceed(authorized)
                 }
                 .apply {
                     if (debug) {
@@ -51,13 +53,15 @@ class ApiClient(
                 }
                 .build()
 
-        telemetryApi =
+        val retrofit =
             Retrofit.Builder()
                 .baseUrl(normalizedBaseUrl)
                 .client(client)
                 .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
                 .build()
-                .create(TelemetryApi::class.java)
+
+        telemetryApi = retrofit.create(TelemetryApi::class.java)
+        authApi = retrofit.create(AuthApi::class.java)
     }
 
     private companion object {

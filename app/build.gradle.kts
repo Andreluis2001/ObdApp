@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.androidx.room)
 }
 
-val debugApiBaseUrl = providers.gradleProperty("drivedata.debugApiBaseUrl").getOrElse("http://10.0.2.2:8000/")
+val debugApiBaseUrl = providers.gradleProperty("drivedata.debugApiBaseUrl").getOrElse("http://10.0.2.2:5000/")
 val releaseApiBaseUrl = providers.gradleProperty("drivedata.apiBaseUrl").getOrElse("https://api.drivedata.example/")
 
 android {

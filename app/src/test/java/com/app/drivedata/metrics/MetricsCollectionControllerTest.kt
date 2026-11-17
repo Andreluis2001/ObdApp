@@ -1,6 +1,5 @@
 package com.app.drivedata.metrics
 
-import com.app.drivedata.auth.AuthSession
 import com.app.drivedata.metrics.model.MetricId
 import com.app.drivedata.metrics.model.MetricReading
 import com.app.drivedata.metrics.model.MetricsSnapshot
@@ -179,7 +178,7 @@ class MetricsCollectionControllerTest {
         val active = MutableStateFlow<ActiveVehicleCollection?>(null)
         val requestedCatalogs = mutableListOf<List<MetricDefinition>>()
 
-        private val authSession = AuthSession().apply { signIn("admin") }
+        private val signedInUser = MutableStateFlow<String?>("admin")
         private val repository = MetricsRepository(FakeMetricRecordDao())
 
         val controller =
@@ -192,7 +191,7 @@ class MetricsCollectionControllerTest {
                     flowOf(snapshot())
                 },
                 repository = repository,
-                authSession = authSession,
+                signedInUser = signedInUser,
             )
     }
 
