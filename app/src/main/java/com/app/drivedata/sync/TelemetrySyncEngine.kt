@@ -26,13 +26,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
-/**
- * Uploads the pending queue with at-least-once semantics.
- *
- * Records keep their stable ids across retries, so the server can deduplicate them. A record is
- * only marked uploaded after the backend acknowledges it; timeouts and unknown outcomes leave it
- * pending for the next run.
- */
 class TelemetrySyncEngine(
     private val dao: MetricRecordDao,
     private val api: TelemetryApi,
@@ -71,7 +64,6 @@ class TelemetrySyncEngine(
         }
 
     private suspend fun runSync(ownerUsername: String): SyncRunResult {
-        // Retention runs even when the network is unavailable; uploaded rows are already safe.
         val pruned = dao.pruneUploadedBefore(clock() - retentionMillis)
         if (pruned > 0) AppLog.i("Pruned $pruned uploaded telemetry records past retention")
 

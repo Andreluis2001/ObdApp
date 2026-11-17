@@ -15,8 +15,6 @@ class TelemetrySyncWorker(
         val application = applicationContext as? DriveDataApplication ?: return Result.failure()
         val container = application.container
 
-        // Local sessions live in memory. A background cold start has no signed-in user, so there is
-        // nothing to attribute uploads to until the next sign-in.
         val owner = container.authSession.signedInUser.value ?: return Result.success()
 
         return when (val result = container.telemetrySyncEngine.sync(owner)) {

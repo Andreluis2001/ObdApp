@@ -175,6 +175,9 @@ fun VehicleDetailsScreen(
     if (confirmRemoval && vehicle != null) {
         AlertDialog(
             onDismissRequest = { confirmRemoval = false },
+            containerColor = HomeSurface,
+            titleContentColor = HomeTextPrimary,
+            textContentColor = HomeTextSecondary,
             title = { Text(stringResource(R.string.vehicle_remove_title)) },
             text = {
                 Text(stringResource(R.string.vehicle_remove_message, vehicle.displayName))

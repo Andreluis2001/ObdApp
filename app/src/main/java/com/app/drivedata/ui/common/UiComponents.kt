@@ -1,5 +1,6 @@
 package com.app.drivedata.ui.common
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -153,7 +154,13 @@ fun PrimaryButton(
             .fillMaxWidth()
             .height(48.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = HomeBlue),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = HomeBlue,
+                contentColor = Color.White,
+                disabledContainerColor = HomeBlue.copy(alpha = 0.35f),
+                disabledContentColor = Color.White.copy(alpha = 0.75f),
+            ),
     ) {
         Text(
             text = label,
@@ -178,6 +185,12 @@ fun SecondaryButton(
             .fillMaxWidth()
             .height(48.dp),
         shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, HomeDivider),
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                contentColor = HomeBlue,
+                disabledContentColor = HomeTextSecondary,
+            ),
     ) {
         Text(
             text = label,

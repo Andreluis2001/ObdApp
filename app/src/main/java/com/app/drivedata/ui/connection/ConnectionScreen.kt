@@ -617,6 +617,9 @@ private fun SupportedPidsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = HomeSurface,
+        titleContentColor = HomeTextPrimary,
+        textContentColor = HomeTextSecondary,
         title = { Text(stringResource(R.string.connection_pids_dialog_title)) },
         text = {
             Column(
@@ -732,6 +735,9 @@ private fun ProtocolDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = HomeSurface,
+        titleContentColor = HomeTextPrimary,
+        textContentColor = HomeTextSecondary,
         title = { Text(stringResource(R.string.connection_protocol_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

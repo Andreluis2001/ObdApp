@@ -1,13 +1,5 @@
 package com.app.drivedata.obd
 
-/**
- * Decodes the 4-byte bitmap returned by a supported-PIDs request (`01 00`, `01 20`, ...).
- *
- * The decoder works on the raw adapter output instead of the library's parsed value so truncated
- * or multi-ECU frames can be reported instead of being silently flattened. Only the first frame
- * that matches the requested service and PID is decoded; merging bitmaps from several ECUs is out
- * of scope.
- */
 object PidBitmap {
 
     fun decode(raw: String?, requestedPidBase: Int): BitmapResult {

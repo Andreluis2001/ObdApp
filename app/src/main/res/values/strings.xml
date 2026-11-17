@@ -40,7 +40,7 @@
     <string name="connection_status_failed">Falha na conexão</string>
 
     <string name="connection_discover">Descobrir veículo</string>
-    <string name="connection_discover_hint">Informe o endereço do ELM327 na rede Wi-Fi. Ao descobrir, o app lê o VIN, identifica o veículo e cadastra os parâmetros suportados.</string>
+    <string name="connection_discover_hint">Informe o endereço do ELM327 na rede Wi-Fi.</string>
     <string name="connection_discovery_failed">Não foi possível descobrir o veículo</string>
     <string name="connection_vehicle_registered">Veículo cadastrado</string>
     <string name="connection_vehicle_registered_hint">O veículo foi identificado pelo VIN e adicionado à sua garagem.</string>
@@ -97,9 +97,9 @@
     <string name="home_pending_value">%1$d registros (~%2$s)</string>
     <string name="home_rejected_data">Registros rejeitados</string>
     <string name="home_rejected_value">%1$d registros</string>
-    <string name="home_sync_error_network">Sem conexão com o servidor. Os dados serão enviados depois.</string>
+    <string name="home_sync_error_network">Sem conexão com o servidor.</string>
     <string name="home_sync_error_auth">Sessão inválida. Entre novamente para sincronizar.</string>
-    <string name="home_sync_error_server">O servidor rejeitou o envio. Os registros foram mantidos.</string>
+    <string name="home_sync_error_server">Erro no envio ao servidor.</string>
     <string name="home_sync_error_unknown">Não foi possível sincronizar os dados.</string>
     <string name="home_adapter">ELM327</string>
     <string name="home_internet">Internet</string>
@@ -192,7 +192,7 @@
     <string name="vehicle_details_adapter">Adaptador</string>
     <string name="vehicle_details_capabilities">Parâmetros suportados</string>
     <string name="vehicle_details_plate">Placa</string>
-    <string name="vehicle_details_identity">Identificação pelo VIN</string>
+    <string name="vehicle_details_identity">Informações</string>
     <string name="vehicle_vin_label">VIN</string>
     <string name="vehicle_manufacturer_label">Fabricante</string>
     <string name="vehicle_serial_label">Número de série</string>
