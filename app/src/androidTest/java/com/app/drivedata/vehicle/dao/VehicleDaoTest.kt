@@ -9,6 +9,7 @@ import com.app.drivedata.vehicle.entity.Elm327ConnectionEntity
 import com.app.drivedata.vehicle.entity.SupportedPidEntity
 import com.app.drivedata.vehicle.entity.VehicleEntity
 import com.app.drivedata.vehicle.model.ConnectionStatus
+import com.app.drivedata.vehicle.model.VehicleIdentity
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -121,19 +122,73 @@ class VehicleDaoTest {
             assertTrue(byPid.values.all { it.discoveredAtMillis == 20L })
         }
 
+    @Test
+    fun insertVehicle_withIdentity_persistsDecodedVinFields() =
+        runBlocking {
+            val identity =
+                VehicleIdentity(
+                    vin = "WBA3A5G59DNP26082",
+                    manufacturer = "BMW",
+                    serialNumber = "P26082",
+                )
+            dao.insertVehicle(vehicle("v1", identity = identity), null)
+
+            val stored = dao.findVehicle("v1")
+            assertEquals("WBA3A5G59DNP26082", stored?.vin)
+            assertEquals("BMW", stored?.manufacturer)
+            assertEquals("P26082", stored?.serialNumber)
+        }
+
+    @Test
+    fun findVehicleByIdentityKey_matchesSerialOrVinForTheOwner() =
+        runBlocking {
+            dao.insertVehicle(
+                vehicle(
+                    "v1",
+                    identity =
+                        VehicleIdentity(
+                            vin = "WBA3A5G59DNP26082",
+                            manufacturer = "BMW",
+                            serialNumber = "P26082",
+                        ),
+                ),
+                null,
+            )
+            dao.insertVehicle(
+                vehicle(
+                    "v2",
+                    owner = "other",
+                    identity =
+                        VehicleIdentity(
+                            vin = "9BWZZZ377VT004251",
+                            manufacturer = "Volkswagen",
+                            serialNumber = "T004251",
+                        ),
+                ),
+                null,
+            )
+
+            assertEquals("v1", dao.findVehicleByIdentityKey("admin", "P26082")?.id)
+            assertEquals("v1", dao.findVehicleByIdentityKey("admin", "WBA3A5G59DNP26082")?.id)
+            assertNull(dao.findVehicleByIdentityKey("admin", "T004251"))
+            assertNull(dao.findVehicleByIdentityKey("admin", "missing"))
+        }
+
     private fun vehicle(
         id: String,
         owner: String = "admin",
         isActive: Boolean = false,
+        identity: VehicleIdentity? = null,
     ): VehicleEntity =
         VehicleEntity(
             id = id,
             ownerUsername = owner,
-            nickname = null,
             make = "Chevrolet",
             model = "S10",
-            year = 2020,
             licensePlate = null,
+            vin = identity?.vin,
+            manufacturer = identity?.manufacturer,
+            serialNumber = identity?.serialNumber,
             isActive = isActive,
             createdAtMillis = 1,
             updatedAtMillis = 1,

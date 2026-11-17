@@ -32,6 +32,16 @@ interface VehicleDao {
     @Query("SELECT * FROM vehicles WHERE id = :vehicleId LIMIT 1")
     suspend fun findVehicle(vehicleId: String): VehicleEntity?
 
+    /**
+     * Finds a vehicle of [owner] by its decoded serial number or, when decoding gave no serial,
+     * by the raw VIN.
+     */
+    @Query(
+        "SELECT * FROM vehicles WHERE owner_username = :owner " +
+            "AND (serial_number = :identityKey OR vin = :identityKey) LIMIT 1",
+    )
+    suspend fun findVehicleByIdentityKey(owner: String, identityKey: String): VehicleEntity?
+
     @Query("SELECT * FROM elm327_connections WHERE vehicle_id = :vehicleId LIMIT 1")
     suspend fun findConnection(vehicleId: String): Elm327ConnectionEntity?
 
@@ -69,30 +79,6 @@ interface VehicleDao {
         clearActive(owner)
         return markActive(vehicleId, owner) > 0
     }
-
-    @Query(
-        "UPDATE vehicles SET make = :make, model = :model, " +
-            "license_plate = :licensePlate, updated_at_millis = :updatedAtMillis " +
-            "WHERE id = :vehicleId",
-    )
-    suspend fun updateDetails(
-        vehicleId: String,
-        make: String,
-        model: String,
-        licensePlate: String?,
-        updatedAtMillis: Long,
-    ): Int
-
-    @Query(
-        "UPDATE elm327_connections SET host = :host, port = :port, connection_status = :status " +
-            "WHERE vehicle_id = :vehicleId",
-    )
-    suspend fun updateConnectionConfig(
-        vehicleId: String,
-        host: String,
-        port: Int,
-        status: ConnectionStatus,
-    ): Int
 
     @Query(
         "UPDATE elm327_connections SET connection_status = :status, " +

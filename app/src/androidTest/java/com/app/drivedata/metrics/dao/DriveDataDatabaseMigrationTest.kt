@@ -5,6 +5,7 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -95,6 +96,33 @@ class DriveDataDatabaseMigrationTest {
                 query("SELECT COUNT(*) FROM `metric_readings`").use { cursor ->
                     cursor.moveToFirst()
                     assertEquals(1, cursor.getInt(0))
+                }
+                close()
+            }
+    }
+
+    @Test
+    fun migrate5To6_addsIdentityColumnsAndKeepsExistingVehicles() {
+        helper.createDatabase(TEST_DATABASE, 5).apply {
+            execSQL(
+                "INSERT INTO `vehicles` (`id`, `owner_username`, `make`, `model`, " +
+                    "`license_plate`, `is_active`, `created_at_millis`, `updated_at_millis`) " +
+                    "VALUES ('v1', 'admin', 'Chevrolet', 'S10', 'ABC1234', 1, 1, 1)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(TEST_DATABASE, 6, true, DriveDataDatabase.MIGRATION_5_6)
+            .apply {
+                query(
+                    "SELECT `make`, `vin`, `manufacturer`, `serial_number` " +
+                        "FROM `vehicles` WHERE `id` = 'v1'",
+                ).use { cursor ->
+                    cursor.moveToFirst()
+                    assertEquals("Chevrolet", cursor.getString(0))
+                    assertTrue(cursor.isNull(1))
+                    assertTrue(cursor.isNull(2))
+                    assertTrue(cursor.isNull(3))
                 }
                 close()
             }

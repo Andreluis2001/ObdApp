@@ -1,12 +1,11 @@
 package com.app.drivedata.ui.connection
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,21 +22,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.SettingsEthernet
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Timer
-import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -58,13 +56,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.drivedata.R
-import com.app.drivedata.obd.model.ConnectionFailure
 import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.obd.model.ObdWifiConfig
+import com.app.drivedata.ui.common.InfoRow
 import com.app.drivedata.ui.common.LightStatusBarIcons
+import com.app.drivedata.ui.common.PrimaryButton
+import com.app.drivedata.ui.common.SecondaryButton
 import com.app.drivedata.ui.common.StatusLabel
 import com.app.drivedata.ui.common.formatDateTime
+import com.app.drivedata.ui.discovery.SetupStage
+import com.app.drivedata.ui.discovery.labelRes
+import com.app.drivedata.ui.discovery.messageRes
 import com.app.drivedata.ui.metrics.presentation
 import com.app.drivedata.ui.theme.HomeBackground
 import com.app.drivedata.ui.theme.HomeBlue
@@ -78,12 +81,13 @@ import com.app.drivedata.ui.theme.LoginBackgroundTop
 import com.app.drivedata.ui.theme.LoginTextMuted
 import com.app.drivedata.ui.vehicles.components.FormTextField
 
-private enum class ConnectionDialog { PAIR, PIDS, PROTOCOL }
+private enum class ConnectionDialog { PIDS, PROTOCOL }
 
 @Composable
 fun ConnectionScreen(
     viewModel: ConnectionViewModel,
     onBack: () -> Unit,
+    onOpenVehicle: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -93,9 +97,10 @@ fun ConnectionScreen(
         onBack = onBack,
         onHostChange = viewModel::onHostChange,
         onPortChange = viewModel::onPortChange,
-        onConnect = viewModel::connect,
+        onDiscover = viewModel::discoverVehicle,
+        onCancel = viewModel::cancelDiscovery,
         onDisconnect = viewModel::disconnect,
-        onTestCommunication = viewModel::testCommunication,
+        onOpenVehicle = onOpenVehicle,
         modifier = modifier,
     )
 }
@@ -106,9 +111,10 @@ private fun ConnectionContent(
     onBack: () -> Unit,
     onHostChange: (String) -> Unit,
     onPortChange: (String) -> Unit,
-    onConnect: () -> Unit,
+    onDiscover: () -> Unit,
+    onCancel: () -> Unit,
     onDisconnect: () -> Unit,
-    onTestCommunication: () -> Unit,
+    onOpenVehicle: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var activeDialog by rememberSaveable { mutableStateOf<ConnectionDialog?>(null) }
@@ -138,9 +144,28 @@ private fun ConnectionContent(
         ) {
             AdapterCard(
                 state = state,
-                onConnect = onConnect,
+                onHostChange = onHostChange,
+                onPortChange = onPortChange,
+                onDiscover = onDiscover,
+                onCancel = onCancel,
                 onDisconnect = onDisconnect,
             )
+
+            when (val discovery = state.discovery) {
+                is VehicleDiscovery.Running ->
+                    DiscoveryProgressCard(stage = discovery.stage, discovery = discovery)
+
+                is VehicleDiscovery.Failed ->
+                    DiscoveryFailureCard(failure = discovery, onRetry = onDiscover)
+
+                is VehicleDiscovery.Succeeded ->
+                    DiscoverySuccessCard(
+                        discovery = discovery,
+                        onOpenVehicle = { onOpenVehicle(discovery.vehicleId) },
+                    )
+
+                VehicleDiscovery.Idle -> Unit
+            }
 
             Text(
                 text = stringResource(R.string.connection_settings),
@@ -150,19 +175,6 @@ private fun ConnectionContent(
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SettingRow(
-                    icon = Icons.Outlined.Wifi,
-                    title = stringResource(R.string.connection_pair_new),
-                    subtitle = stringResource(R.string.connection_pair_new_subtitle),
-                    onClick = { activeDialog = ConnectionDialog.PAIR },
-                )
-                SettingRow(
-                    icon = Icons.Outlined.Timer,
-                    title = stringResource(R.string.connection_test),
-                    subtitle = stringResource(R.string.connection_test_subtitle),
-                    onClick = onTestCommunication,
-                    enabled = state.isConfigValid && !state.isBusy,
-                )
                 SettingRow(
                     icon = Icons.Outlined.Settings,
                     title = stringResource(R.string.connection_pids),
@@ -184,19 +196,6 @@ private fun ConnectionContent(
     }
 
     when (activeDialog) {
-        ConnectionDialog.PAIR ->
-            PairDeviceDialog(
-                host = state.host,
-                port = state.port,
-                onHostChange = onHostChange,
-                onPortChange = onPortChange,
-                onDismiss = { activeDialog = null },
-                onConfirm = {
-                    activeDialog = null
-                    onConnect()
-                },
-            )
-
         ConnectionDialog.PIDS ->
             SupportedPidsDialog(
                 summary = state.supportedPids,
@@ -251,36 +250,14 @@ private fun ConnectionHeader(onBack: () -> Unit) {
 @Composable
 private fun AdapterCard(
     state: ConnectionUiState,
-    onConnect: () -> Unit,
+    onHostChange: (String) -> Unit,
+    onPortChange: (String) -> Unit,
+    onDiscover: () -> Unit,
+    onCancel: () -> Unit,
     onDisconnect: () -> Unit,
 ) {
     val connection = state.connection
-    val statusColor = connection.statusColor()
-    val actionLabel: Int
-    val action: () -> Unit
-    when (connection) {
-        is ObdConnectionState.Connecting,
-        is ObdConnectionState.Initializing,
-        -> {
-            actionLabel = R.string.connection_action_cancel
-            action = onDisconnect
-        }
-
-        is ObdConnectionState.Connected -> {
-            actionLabel = R.string.connection_disconnect
-            action = onDisconnect
-        }
-
-        is ObdConnectionState.Failed -> {
-            actionLabel = R.string.connection_action_retry
-            action = onConnect
-        }
-
-        is ObdConnectionState.Disconnected -> {
-            actionLabel = R.string.connection_connect
-            action = onConnect
-        }
-    }
+    val discovering = state.isDiscovering
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -291,7 +268,7 @@ private fun AdapterCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
@@ -300,11 +277,7 @@ private fun AdapterCard(
                         .background(HomeBlue.copy(alpha = 0.10f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.ic_elm327_adapter),
-                        contentDescription = null,
-                        modifier = Modifier.size(54.dp),
-                    )
+                    ImageAdapterIcon()
                 }
                 Spacer(Modifier.width(16.dp))
                 Column(
@@ -312,7 +285,7 @@ private fun AdapterCard(
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
                     StatusLabel(
-                        color = statusColor,
+                        color = connection.statusColor(),
                         label = connection.statusLabel(),
                     )
                     Text(
@@ -329,30 +302,229 @@ private fun AdapterCard(
                 }
             }
 
-            val failure = connection as? ObdConnectionState.Failed
-            if (failure != null) {
-                Text(
-                    text = stringResource(failure.reason.messageRes()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = HomeRed,
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormTextField(
+                    value = state.host,
+                    onValueChange = onHostChange,
+                    label = stringResource(R.string.connection_host_label),
+                    icon = Icons.Filled.Router,
+                    isError = false,
+                    errorText = "",
+                    keyboardType = KeyboardType.Uri,
+                    enabled = !state.isBusy,
+                )
+                FormTextField(
+                    value = state.port,
+                    onValueChange = onPortChange,
+                    label = stringResource(R.string.connection_port_label),
+                    icon = Icons.Filled.SettingsEthernet,
+                    isError = false,
+                    errorText = "",
+                    keyboardType = KeyboardType.Number,
+                    enabled = !state.isBusy,
                 )
             }
 
-            OutlinedButton(
-                onClick = action,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                border = BorderStroke(1.dp, HomeBlue.copy(alpha = 0.55f)),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = HomeBlue),
-            ) {
+            Text(
+                text = stringResource(R.string.connection_discover_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = HomeTextSecondary,
+            )
+
+            if (discovering) {
+                PrimaryButton(
+                    label = stringResource(R.string.connection_action_cancel),
+                    onClick = onCancel,
+                )
+            } else {
+                PrimaryButton(
+                    label = stringResource(R.string.connection_discover),
+                    onClick = onDiscover,
+                    enabled = state.isConfigValid && !state.isBusy,
+                )
+                if (connection is ObdConnectionState.Connected ||
+                    connection is ObdConnectionState.Failed
+                ) {
+                    SecondaryButton(
+                        label = stringResource(R.string.connection_disconnect),
+                        onClick = onDisconnect,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImageAdapterIcon() {
+    androidx.compose.foundation.Image(
+        painter = painterResource(R.drawable.ic_elm327_adapter),
+        contentDescription = null,
+        modifier = Modifier.size(54.dp),
+    )
+}
+
+@Composable
+private fun DiscoveryProgressCard(
+    stage: SetupStage,
+    discovery: VehicleDiscovery.Running,
+) {
+    SectionCard {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            CircularProgressIndicator(
+                color = HomeBlue,
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(22.dp),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = stringResource(actionLabel),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
+                    text = stringResource(stage.labelRes()),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = HomeTextPrimary,
+                )
+                if (stage == SetupStage.DISCOVERY) {
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.discovery_progress,
+                                discovery.rangeBase,
+                                discovery.foundCount,
+                            ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = HomeTextSecondary,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiscoveryFailureCard(
+    failure: VehicleDiscovery.Failed,
+    onRetry: () -> Unit,
+) {
+    SectionCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Filled.Warning,
+                contentDescription = null,
+                tint = HomeRed,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = stringResource(R.string.connection_discovery_failed),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = HomeTextPrimary,
+            )
+        }
+        Text(
+            text = stringResource(failure.stage.labelRes()),
+            style = MaterialTheme.typography.labelMedium,
+            color = HomeTextSecondary,
+        )
+        Text(
+            text = stringResource(failure.failure.messageRes()),
+            style = MaterialTheme.typography.bodyMedium,
+            color = HomeTextPrimary,
+        )
+        PrimaryButton(
+            label = stringResource(R.string.connection_action_retry),
+            onClick = onRetry,
+        )
+    }
+}
+
+@Composable
+private fun DiscoverySuccessCard(
+    discovery: VehicleDiscovery.Succeeded,
+    onOpenVehicle: () -> Unit,
+) {
+    SectionCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(HomeGreen.copy(alpha = 0.14f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = HomeGreen,
+                    modifier = Modifier.size(24.dp),
                 )
             }
+            Spacer(Modifier.width(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text =
+                        stringResource(
+                            if (discovery.alreadyRegistered) {
+                                R.string.connection_vehicle_already_registered
+                            } else {
+                                R.string.connection_vehicle_registered
+                            },
+                        ),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = HomeTextPrimary,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            if (discovery.alreadyRegistered) {
+                                R.string.connection_vehicle_already_registered_hint
+                            } else {
+                                R.string.connection_vehicle_registered_hint
+                            },
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = HomeTextSecondary,
+                )
+            }
+        }
+
+        Text(
+            text = discovery.vehicleName,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = HomeTextPrimary,
+        )
+        InfoRow(label = stringResource(R.string.vehicle_vin_label), value = discovery.vin)
+        discovery.manufacturer?.let { manufacturer ->
+            InfoRow(label = stringResource(R.string.vehicle_manufacturer_label), value = manufacturer)
+        }
+        discovery.serialNumber?.let { serialNumber ->
+            InfoRow(label = stringResource(R.string.vehicle_serial_label), value = serialNumber)
+        }
+
+        PrimaryButton(
+            label = stringResource(R.string.connection_vehicle_details),
+            onClick = onOpenVehicle,
+        )
+    }
+}
+
+@Composable
+private fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = HomeSurface),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            content()
         }
     }
 }
@@ -436,70 +608,6 @@ private fun InfoBanner() {
 }
 
 @Composable
-private fun PairDeviceDialog(
-    host: String,
-    port: String,
-    onHostChange: (String) -> Unit,
-    onPortChange: (String) -> Unit,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    val portNumber = port.toIntOrNull()
-    val isValid = host.isNotBlank() && portNumber != null && portNumber in 1..65535
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.connection_pair_dialog_title)) },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.connection_pair_dialog_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = HomeTextSecondary,
-                )
-                FormTextField(
-                    value = host,
-                    onValueChange = onHostChange,
-                    label = stringResource(R.string.connection_host_label),
-                    icon = Icons.Filled.Router,
-                    isError = false,
-                    errorText = "",
-                )
-                FormTextField(
-                    value = port,
-                    onValueChange = onPortChange,
-                    label = stringResource(R.string.connection_port_label),
-                    icon = Icons.Filled.SettingsEthernet,
-                    isError = false,
-                    errorText = "",
-                    keyboardType = KeyboardType.Number,
-                )
-                if (!isValid) {
-                    Text(
-                        text = stringResource(R.string.failure_invalid_configuration),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = HomeRed,
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm, enabled = isValid) {
-                Text(stringResource(R.string.connection_connect))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
-        },
-    )
-}
-
-@Composable
 private fun SupportedPidsDialog(
     summary: SupportedPidsSummary,
     onDismiss: () -> Unit,
@@ -509,6 +617,9 @@ private fun SupportedPidsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = HomeSurface,
+        titleContentColor = HomeTextPrimary,
+        textContentColor = HomeTextSecondary,
         title = { Text(stringResource(R.string.connection_pids_dialog_title)) },
         text = {
             Column(
@@ -601,7 +712,7 @@ private fun SupportedPidRow(item: SupportedPidItem) {
                 text =
                     stringResource(presentation.unitRes) +
                         " · " +
-                        stringResource(R.string.add_vehicle_pid_value, item.definition.pid),
+                        stringResource(R.string.pid_value, item.definition.pid),
                 style = MaterialTheme.typography.labelSmall,
                 color = HomeTextSecondary,
             )
@@ -624,6 +735,9 @@ private fun ProtocolDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = HomeSurface,
+        titleContentColor = HomeTextPrimary,
+        textContentColor = HomeTextSecondary,
         title = { Text(stringResource(R.string.connection_protocol_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -721,15 +835,4 @@ private fun ObdConnectionState.configOrNull(): ObdWifiConfig? =
         is ObdConnectionState.Connecting -> config
         is ObdConnectionState.Failed -> config
         is ObdConnectionState.Disconnected -> null
-    }
-
-private fun ConnectionFailure.messageRes(): Int =
-    when (this) {
-        ConnectionFailure.INVALID_CONFIGURATION -> R.string.failure_invalid_configuration
-        ConnectionFailure.CONNECT_TIMEOUT -> R.string.failure_connect_timeout
-        ConnectionFailure.TRANSPORT -> R.string.failure_transport
-        ConnectionFailure.MISSING_PROMPT -> R.string.failure_missing_prompt
-        ConnectionFailure.ADAPTER_INITIALIZATION -> R.string.failure_adapter_initialization
-        ConnectionFailure.ECU_NO_RESPONSE -> R.string.failure_ecu_no_response
-        ConnectionFailure.UNKNOWN -> R.string.failure_unknown
     }

@@ -19,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -57,6 +56,7 @@ import com.app.drivedata.ui.common.SecondaryButton
 import com.app.drivedata.ui.common.StatusLabel
 import com.app.drivedata.ui.common.TintedIconBadge
 import com.app.drivedata.ui.common.formatDateTime
+import com.app.drivedata.ui.discovery.messageRes
 import com.app.drivedata.ui.metrics.presentation
 import com.app.drivedata.ui.theme.HomeBackground
 import com.app.drivedata.ui.theme.HomeBlue
@@ -71,7 +71,6 @@ import com.app.drivedata.ui.vehicles.components.VehicleHeader
 import com.app.drivedata.ui.vehicles.components.color
 import com.app.drivedata.ui.vehicles.components.label
 import com.app.drivedata.ui.vehicles.components.lastCommunicationText
-import com.app.drivedata.ui.vehicles.messageRes
 import com.app.drivedata.vehicle.model.SupportedPid
 import com.app.drivedata.vehicle.model.Vehicle
 
@@ -79,7 +78,6 @@ import com.app.drivedata.vehicle.model.Vehicle
 fun VehicleDetailsScreen(
     viewModel: VehicleDetailsViewModel,
     onBack: () -> Unit,
-    onEdit: (String) -> Unit,
     onDeleted: () -> Unit,
     modifier: Modifier = Modifier,
     catalog: List<MetricDefinition> = defaultMetricCatalog,
@@ -154,7 +152,6 @@ fun VehicleDetailsScreen(
                     VehicleInfoCard(
                         vehicle = vehicle,
                         enabled = !state.isBusy,
-                        onEdit = { onEdit(vehicle.id) },
                         onSelectActive = viewModel::setActive,
                         onRemove = { confirmRemoval = true },
                     )
@@ -178,6 +175,9 @@ fun VehicleDetailsScreen(
     if (confirmRemoval && vehicle != null) {
         AlertDialog(
             onDismissRequest = { confirmRemoval = false },
+            containerColor = HomeSurface,
+            titleContentColor = HomeTextPrimary,
+            textContentColor = HomeTextSecondary,
             title = { Text(stringResource(R.string.vehicle_remove_title)) },
             text = {
                 Text(stringResource(R.string.vehicle_remove_message, vehicle.displayName))
@@ -208,7 +208,6 @@ fun VehicleDetailsScreen(
 private fun VehicleInfoCard(
     vehicle: Vehicle,
     enabled: Boolean,
-    onEdit: () -> Unit,
     onSelectActive: () -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -242,7 +241,9 @@ private fun VehicleInfoCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "${vehicle.details.make} ${vehicle.details.model}",
+                    text =
+                        vehicle.identity?.vin
+                            ?: "${vehicle.details.make} ${vehicle.details.model}".trim(),
                     style = MaterialTheme.typography.bodySmall,
                     color = HomeTextSecondary,
                     maxLines = 1,
@@ -252,18 +253,6 @@ private fun VehicleInfoCard(
                     Spacer(Modifier.height(2.dp))
                     ActiveBadge()
                 }
-            }
-            IconButton(
-                onClick = onEdit,
-                enabled = enabled,
-                modifier = Modifier.size(36.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Edit,
-                    contentDescription = stringResource(R.string.vehicle_details_edit),
-                    tint = HomeBlue,
-                    modifier = Modifier.size(20.dp),
-                )
             }
             IconButton(
                 onClick = onRemove,
@@ -291,6 +280,25 @@ private fun VehicleInfoCard(
         vehicle.details.licensePlate?.let { plate ->
             RowDivider()
             InfoRow(label = stringResource(R.string.vehicle_details_plate), value = plate)
+        }
+
+        vehicle.identity?.let { identity ->
+            RowDivider()
+            Text(
+                text = stringResource(R.string.vehicle_details_identity),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = HomeTextPrimary,
+            )
+            InfoRow(label = stringResource(R.string.vehicle_vin_label), value = identity.vin)
+            InfoRow(
+                label = stringResource(R.string.vehicle_manufacturer_label),
+                value = identity.manufacturer ?: stringResource(R.string.vehicle_identity_unavailable),
+            )
+            InfoRow(
+                label = stringResource(R.string.vehicle_serial_label),
+                value = identity.serialNumber ?: stringResource(R.string.vehicle_identity_unavailable),
+            )
         }
     }
 }
@@ -360,7 +368,7 @@ private fun CapabilitiesCard(
                 Text(
                     text =
                         stringResource(
-                            R.string.add_vehicle_discovered_at,
+                            R.string.vehicle_discovered_at,
                             formatDateTime(discoveredAt),
                         ),
                     style = MaterialTheme.typography.labelSmall,
@@ -376,7 +384,7 @@ private fun CapabilitiesCard(
                     pid = supported.pid,
                     subtitle =
                         stringResource(definition.id.presentation().unitRes) + " · " +
-                            stringResource(R.string.add_vehicle_pid_value, supported.pid),
+                            stringResource(R.string.pid_value, supported.pid),
                     checked = supported.enabledForCollection,
                     enabled = enabled,
                     onToggle = onPidToggle,
@@ -386,7 +394,7 @@ private fun CapabilitiesCard(
 
         Spacer(Modifier.height(4.dp))
         SecondaryButton(
-            label = stringResource(R.string.add_vehicle_rediscover),
+            label = stringResource(R.string.vehicle_rediscover),
             onClick = onRediscover,
             enabled = enabled && vehicle.connection.isConfigured,
         )

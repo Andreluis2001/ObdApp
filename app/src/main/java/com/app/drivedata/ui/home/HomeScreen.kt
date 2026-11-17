@@ -7,8 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -606,7 +608,12 @@ private fun SeeAllRow(onClick: () -> Unit) {
 @Composable
 private fun ConnectionStatusCards(state: HomeUiState) {
     val adapterConnected = state.connection is ObdConnectionState.Connected
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         StatusCard(
             icon = Icons.Filled.Wifi,
             label = stringResource(R.string.home_adapter),
@@ -614,7 +621,9 @@ private fun ConnectionStatusCards(state: HomeUiState) {
                 if (adapterConnected) R.string.home_connected_value else R.string.home_disconnected_value,
             ),
             valueColor = if (adapterConnected) HomeGreen else HomeTextSecondary,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
         )
         StatusCard(
             icon = Icons.Filled.Language,
@@ -623,7 +632,9 @@ private fun ConnectionStatusCards(state: HomeUiState) {
                 if (state.internetAvailable) R.string.home_available else R.string.home_unavailable,
             ),
             valueColor = if (state.internetAvailable) HomeGreen else HomeRed,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
         )
         StatusCard(
             icon = Icons.Filled.Storage,
@@ -634,7 +645,9 @@ private fun ConnectionStatusCards(state: HomeUiState) {
                 formatBytes(state.storageBudgetBytes),
             ),
             valueColor = HomeTextPrimary,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
         )
     }
 }
@@ -655,9 +668,10 @@ private fun StatusCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight()
                 .padding(horizontal = 8.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
         ) {
             Icon(
                 imageVector = icon,

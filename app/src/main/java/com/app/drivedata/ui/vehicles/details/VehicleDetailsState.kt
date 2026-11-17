@@ -1,7 +1,7 @@
 package com.app.drivedata.ui.vehicles.details
 
-import com.app.drivedata.ui.vehicles.SetupFailure
-import com.app.drivedata.ui.vehicles.SetupStage
+import com.app.drivedata.ui.discovery.SetupFailure
+import com.app.drivedata.ui.discovery.SetupStage
 import com.app.drivedata.vehicle.model.Vehicle
 
 data class VehicleDetailsUiState(

@@ -20,7 +20,6 @@
     <string name="connection_header_subtitle">ELM327 + Veículo</string>
     <string name="connection_host_label">Endereço IP do adaptador</string>
     <string name="connection_port_label">Porta</string>
-    <string name="connection_connect">Conectar</string>
     <string name="connection_disconnect">Desconectar</string>
     <string name="connection_action_cancel">Cancelar</string>
     <string name="connection_action_retry">Tentar novamente</string>
@@ -40,13 +39,14 @@
     <string name="connection_status_invalid_response">Resposta inválida do veículo</string>
     <string name="connection_status_failed">Falha na conexão</string>
 
-    <string name="connection_pair_new">Parear novo dispositivo</string>
-    <string name="connection_pair_new_subtitle">Conectar outro ELM327</string>
-    <string name="connection_pair_dialog_title">Parear novo dispositivo</string>
-    <string name="connection_pair_dialog_hint">Informe o endereço do adaptador na rede Wi-Fi.</string>
-
-    <string name="connection_test">Testar comunicação</string>
-    <string name="connection_test_subtitle">Verificar se o veículo responde</string>
+    <string name="connection_discover">Descobrir veículo</string>
+    <string name="connection_discover_hint">Informe o endereço do ELM327 na rede Wi-Fi.</string>
+    <string name="connection_discovery_failed">Não foi possível descobrir o veículo</string>
+    <string name="connection_vehicle_registered">Veículo cadastrado</string>
+    <string name="connection_vehicle_registered_hint">O veículo foi identificado pelo VIN e adicionado à sua garagem.</string>
+    <string name="connection_vehicle_already_registered">Veículo já cadastrado</string>
+    <string name="connection_vehicle_already_registered_hint">Este número de série já estava cadastrado. O adaptador e os parâmetros foram atualizados.</string>
+    <string name="connection_vehicle_details">Ver detalhes do veículo</string>
 
     <string name="connection_pids">PIDs suportados</string>
     <string name="connection_pids_subtitle">Parâmetros descobertos no veículo ativo</string>
@@ -54,7 +54,7 @@
     <string name="connection_pids_dialog_hint">Estes parâmetros foram descobertos na ECU do veículo ativo. A disponibilidade pode variar conforme o modelo e ano.</string>
     <string name="connection_pids_dialog_active_vehicle">Veículo ativo: %1$s</string>
     <string name="connection_pids_dialog_discovered_at">Descobertos em %1$s</string>
-    <string name="connection_pids_dialog_no_vehicle">Nenhum veículo ativo. Cadastre ou selecione um veículo em Meus veículos.</string>
+    <string name="connection_pids_dialog_no_vehicle">Nenhum veículo ativo. Descubra um veículo na aba Conexão.</string>
     <string name="connection_pids_dialog_no_discovery">Os parâmetros de %1$s ainda não foram descobertos. Abra os detalhes do veículo e redescubra os parâmetros.</string>
     <string name="connection_pids_dialog_no_catalog_pids">O veículo ativo não informou parâmetros compatíveis com o app.</string>
     <string name="connection_pids_dialog_collection_disabled">Coleta desativada</string>
@@ -73,7 +73,6 @@
     <string name="failure_transport">Não foi possível alcançar o adaptador. Verifique se o celular está na rede Wi-Fi do adaptador.</string>
     <string name="failure_missing_prompt">O adaptador não enviou o prompt esperado (&gt;). Ele pode não ser um dispositivo ELM327.</string>
     <string name="failure_adapter_initialization">O adaptador não aceitou os comandos de inicialização. Ele pode não ser um dispositivo compatível com ELM327.</string>
-    <string name="failure_ecu_no_response">O veículo ou o adaptador parou de responder. Verifique a ignição e a conexão Wi-Fi e tente novamente.</string>
     <string name="failure_unknown">Ocorreu um erro inesperado ao conectar.</string>
 
     <string name="tab_home">Início</string>
@@ -82,7 +81,6 @@
     <string name="tab_metrics">Leituras</string>
 
     <string name="home_no_active_vehicle">Nenhum veículo ativo</string>
-    <string name="home_vehicle_add_hint">Toque para escolher ou cadastrar um veículo</string>
     <string name="home_select_vehicle">Selecionar veículo</string>
     <string name="home_connected">Veículo conectado</string>
     <string name="home_disconnected">Veículo desconectado</string>
@@ -99,9 +97,9 @@
     <string name="home_pending_value">%1$d registros (~%2$s)</string>
     <string name="home_rejected_data">Registros rejeitados</string>
     <string name="home_rejected_value">%1$d registros</string>
-    <string name="home_sync_error_network">Sem conexão com o servidor. Os dados serão enviados depois.</string>
+    <string name="home_sync_error_network">Sem conexão com o servidor.</string>
     <string name="home_sync_error_auth">Sessão inválida. Entre novamente para sincronizar.</string>
-    <string name="home_sync_error_server">O servidor rejeitou o envio. Os registros foram mantidos.</string>
+    <string name="home_sync_error_server">Erro no envio ao servidor.</string>
     <string name="home_sync_error_unknown">Não foi possível sincronizar os dados.</string>
     <string name="home_adapter">ELM327</string>
     <string name="home_internet">Internet</string>
@@ -171,8 +169,7 @@
     <string name="vehicles_title">Meus veículos</string>
     <string name="vehicles_subtitle">Escolha o veículo ativo e gerencie os adaptadores</string>
     <string name="vehicles_empty_title">Nenhum veículo cadastrado</string>
-    <string name="vehicles_empty_message">Cadastre seu primeiro veículo para começar a coletar os parâmetros do motor.</string>
-    <string name="vehicle_add">Adicionar veículo</string>
+    <string name="vehicles_empty_message">Descubra seu primeiro veículo na aba Conexão: informe o endereço do adaptador e toque em Descobrir veículo.</string>
     <string name="vehicle_active_badge">Ativo</string>
     <string name="vehicle_select_active">Definir como ativo</string>
     <string name="vehicle_remove">Remover</string>
@@ -195,71 +192,39 @@
     <string name="vehicle_details_adapter">Adaptador</string>
     <string name="vehicle_details_capabilities">Parâmetros suportados</string>
     <string name="vehicle_details_plate">Placa</string>
+    <string name="vehicle_details_identity">Informações</string>
+    <string name="vehicle_vin_label">VIN</string>
+    <string name="vehicle_manufacturer_label">Fabricante</string>
+    <string name="vehicle_serial_label">Número de série</string>
+    <string name="vehicle_identity_unavailable">Não disponível</string>
     <string name="vehicle_details_last_connection">Última conexão com o adaptador</string>
     <string name="vehicle_details_no_capabilities">Nenhum parâmetro descoberto para este veículo. Conecte o adaptador e redescubra os parâmetros suportados.</string>
     <string name="vehicle_details_not_found">Não foi possível carregar este veículo.</string>
-    <string name="vehicle_details_edit">Editar dados</string>
     <string name="vehicle_details_rediscovering">Redescobrindo parâmetros</string>
     <string name="vehicle_details_connecting">Conectando ao adaptador\u2026</string>
     <string name="vehicle_details_discovering">Descobrindo parâmetros suportados\u2026</string>
     <string name="vehicle_details_discovery_progress">Faixa 0x%1$02X \u2022 %2$d parâmetros encontrados</string>
-    <string name="vehicle_details_not_configured">Este veículo não tem um adaptador configurado. Edite os dados para informar o endereço.</string>
+    <string name="vehicle_details_not_configured">Este veículo não tem um adaptador configurado. Descubra o veículo novamente na aba Conexão.</string>
     <string name="vehicle_details_pid_update_failed">Não foi possível atualizar o parâmetro. Tente novamente.</string>
     <string name="vehicle_details_delete_failed">Não foi possível remover o veículo. Tente novamente.</string>
     <string name="vehicle_details_activate_failed">Não foi possível definir o veículo ativo. Tente novamente.</string>
     <string name="vehicle_details_rediscovery_failed">Não foi possível redescobrir os parâmetros. Os valores anteriores foram mantidos. %1$s</string>
 
-    <string name="edit_vehicle_title">Editar veículo</string>
-    <string name="edit_vehicle_subtitle">Atualize os dados do veículo e do adaptador</string>
-    <string name="edit_vehicle_section_vehicle">Dados do veículo</string>
-    <string name="edit_vehicle_section_adapter">Adaptador ELM327</string>
-    <string name="edit_vehicle_load_failed">Não foi possível carregar os dados do veículo.</string>
-    <string name="edit_vehicle_save_failed">Não foi possível salvar as alterações. Tente novamente.</string>
-    <string name="vehicle_save">Salvar alterações</string>
+    <string name="vehicle_discovered_at">Descobertos em %1$s</string>
+    <string name="vehicle_rediscover">Descobrir parâmetros novamente</string>
+    <string name="pid_value">PID 0x%1$02X</string>
 
-    <string name="add_vehicle_title">Novo veículo</string>
-    <string name="add_vehicle_step_vehicle">Veículo</string>
-    <string name="add_vehicle_step_adapter">Adaptador</string>
-    <string name="add_vehicle_step_parameters">Parâmetros</string>
-    <string name="vehicle_make_label">Marca</string>
-    <string name="vehicle_model_label">Modelo</string>
-    <string name="form_section_identification">Identificação do veículo</string>
-    <string name="vehicle_plate_label">Placa</string>
-    <string name="vehicle_error_make">Informe a marca do veículo.</string>
-    <string name="vehicle_error_model">Informe o modelo do veículo.</string>
-    <string name="vehicle_error_plate_required">A placa é obrigatória.</string>
-    <string name="vehicle_error_plate_invalid">Placa inválida. Use o formato ABC1234 ou ABC1D23.</string>
-    <string name="add_vehicle_continue">Continuar</string>
-    <string name="add_vehicle_test_connection">Testar conexão e descobrir parâmetros</string>
-    <string name="add_vehicle_save_without_test">Salvar sem testar</string>
-    <string name="add_vehicle_save">Salvar veículo</string>
-    <string name="add_vehicle_rediscover">Descobrir parâmetros novamente</string>
-    <string name="add_vehicle_retry">Tentar novamente</string>
-    <string name="add_vehicle_retry_save">Tentar salvar novamente</string>
-    <string name="add_vehicle_back_to_form">Voltar aos dados</string>
-    <string name="add_vehicle_cancel">Cancelar cadastro</string>
-    <string name="add_vehicle_connecting">Conectando ao adaptador\u2026</string>
-    <string name="add_vehicle_initializing">Inicializando o ELM327\u2026</string>
-    <string name="add_vehicle_testing_ecu">Verificando a comunicação com o veículo\u2026</string>
-    <string name="add_vehicle_discovering">Descobrindo parâmetros suportados\u2026</string>
-    <string name="add_vehicle_discovery_progress">Faixa 0x%1$02X \u2022 %2$d parâmetros encontrados</string>
-    <string name="add_vehicle_saving">Salvando veículo\u2026</string>
-    <string name="add_vehicle_adapter_hint">Informe o endereço do ELM327 na rede Wi-Fi. Você pode salvar sem testar e configurar depois.</string>
-    <string name="add_vehicle_review_title">Parâmetros encontrados</string>
-    <string name="add_vehicle_review_hint">Desative os parâmetros que não deseja coletar. A disponibilidade pode variar com o veículo.</string>
-    <string name="add_vehicle_discovered_at">Descobertos em %1$s</string>
-    <string name="add_vehicle_no_pids">O veículo não informou nenhum parâmetro compatível com o app. Você ainda pode salvar o veículo.</string>
-    <string name="add_vehicle_failure_title">Não foi possível concluir a configuração</string>
-    <string name="add_vehicle_stage_connect">Conexão com o adaptador</string>
-    <string name="add_vehicle_stage_initialize">Inicialização do adaptador</string>
-    <string name="add_vehicle_stage_ecu">Comunicação com a ECU</string>
-    <string name="add_vehicle_stage_discovery">Descoberta de parâmetros</string>
-    <string name="add_vehicle_stage_save">Gravação do veículo</string>
-    <string name="add_vehicle_pid_value">PID 0x%1$02X</string>
-    <string name="add_vehicle_save_anyway">Salvar mesmo assim</string>
+    <string name="discovery_stage_connect">Conexão com o adaptador</string>
+    <string name="discovery_stage_initialize">Inicialização do adaptador</string>
+    <string name="discovery_stage_ecu">Comunicação com a ECU</string>
+    <string name="discovery_stage_identity">Identificação do veículo</string>
+    <string name="discovery_stage_discovery">Descoberta de parâmetros</string>
+    <string name="discovery_stage_save">Gravação do veículo</string>
+    <string name="discovery_progress">Faixa 0x%1$02X \u2022 %2$d parâmetros encontrados</string>
 
     <string name="failure_ecu_no_data">O veículo não respondeu à consulta de parâmetros.</string>
     <string name="failure_malformed_response">O veículo enviou uma resposta inválida.</string>
+    <string name="failure_vin_unavailable">O veículo não informou um VIN válido. Não foi possível identificá-lo para o cadastro.</string>
     <string name="failure_invalid_bitmap">A lista de parâmetros suportados veio incompleta ou inválida.</string>
     <string name="failure_discovery_timeout">A descoberta de parâmetros excedeu o tempo limite.</string>
     <string name="failure_discovery_connection_lost">A conexão com o adaptador foi perdida durante a descoberta.</string>

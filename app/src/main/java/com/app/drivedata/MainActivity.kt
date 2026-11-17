@@ -2,6 +2,7 @@ package com.app.drivedata
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -55,18 +56,22 @@ import com.app.drivedata.ui.theme.HomeSurface
 import com.app.drivedata.ui.theme.HomeTextSecondary
 import com.app.drivedata.ui.vehicles.VehicleListScreen
 import com.app.drivedata.ui.vehicles.VehicleListViewModel
-import com.app.drivedata.ui.vehicles.add.AddVehicleScreen
-import com.app.drivedata.ui.vehicles.add.AddVehicleViewModel
 import com.app.drivedata.ui.vehicles.details.VehicleDetailsScreen
 import com.app.drivedata.ui.vehicles.details.VehicleDetailsViewModel
-import com.app.drivedata.ui.vehicles.edit.EditVehicleScreen
-import com.app.drivedata.ui.vehicles.edit.EditVehicleViewModel
-import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // The brand palette is light-only, so the system bars are pinned instead of
+        // following the device dark-mode setting.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle =
+                SystemBarStyle.light(
+                    android.graphics.Color.TRANSPARENT,
+                    android.graphics.Color.TRANSPARENT,
+                ),
+        )
         setContent {
             DriveDataTheme {
                 DriveDataApp()
@@ -82,7 +87,7 @@ private enum class AppDestination(val labelRes: Int) {
     METRICS(R.string.tab_metrics),
 }
 
-private enum class VehicleRoute { ADD, DETAILS, EDIT }
+private enum class VehicleRoute { DETAILS }
 
 @Composable
 private fun DriveDataApp() {
@@ -109,18 +114,7 @@ private fun DriveDataApp() {
     var destination by rememberSaveable { mutableStateOf(AppDestination.HOME) }
     var vehicleRoute by rememberSaveable { mutableStateOf<VehicleRoute?>(null) }
     var selectedVehicleId by rememberSaveable { mutableStateOf<String?>(null) }
-    var addVehicleSession by rememberSaveable { mutableStateOf(0) }
-    var editReturnsToDetails by rememberSaveable { mutableStateOf(true) }
-    val addVehicleSessionKey = rememberSaveable { UUID.randomUUID().toString() }
-    val addVehicleViewModel: AddVehicleViewModel? =
-        if (vehicleRoute == VehicleRoute.ADD) {
-            viewModel(
-                key = "add-vehicle-$addVehicleSessionKey-$addVehicleSession",
-                factory = AddVehicleViewModel.factory(application),
-            )
-        } else {
-            null
-        }
+    var detailsReturnDestination by rememberSaveable { mutableStateOf(AppDestination.VEHICLES) }
     val detailsVehicleId = selectedVehicleId
     val vehicleDetailsViewModel: VehicleDetailsViewModel? =
         if (vehicleRoute == VehicleRoute.DETAILS && detailsVehicleId != null) {
@@ -131,40 +125,22 @@ private fun DriveDataApp() {
         } else {
             null
         }
-    val editVehicleViewModel: EditVehicleViewModel? =
-        if (vehicleRoute == VehicleRoute.EDIT && detailsVehicleId != null) {
-            viewModel(
-                key = "vehicle-edit-$detailsVehicleId",
-                factory = EditVehicleViewModel.factory(application, detailsVehicleId),
-            )
-        } else {
-            null
-        }
 
-    BackHandler(
-        enabled =
-            vehicleRoute == VehicleRoute.DETAILS ||
-                vehicleRoute == VehicleRoute.EDIT,
-    ) {
-        when (vehicleRoute) {
-            VehicleRoute.DETAILS -> {
-                vehicleDetailsViewModel?.onScreenDisposed()
-                selectedVehicleId = null
-                vehicleRoute = null
-                destination = AppDestination.VEHICLES
-            }
+    fun closeDetails() {
+        vehicleDetailsViewModel?.onScreenDisposed()
+        selectedVehicleId = null
+        vehicleRoute = null
+        destination = detailsReturnDestination
+    }
 
-            VehicleRoute.EDIT ->
-                if (editReturnsToDetails) {
-                    vehicleRoute = VehicleRoute.DETAILS
-                } else {
-                    selectedVehicleId = null
-                    vehicleRoute = null
-                    destination = AppDestination.VEHICLES
-                }
+    fun openDetails(vehicleId: String, returnTo: AppDestination) {
+        detailsReturnDestination = returnTo
+        selectedVehicleId = vehicleId
+        vehicleRoute = VehicleRoute.DETAILS
+    }
 
-            else -> Unit
-        }
+    BackHandler(enabled = vehicleRoute == VehicleRoute.DETAILS) {
+        closeDetails()
     }
 
     Scaffold(
@@ -174,7 +150,6 @@ private fun DriveDataApp() {
             AppBottomBar(
                 selected = if (vehicleRoute == null) destination else null,
                 onSelect = { target ->
-                    addVehicleViewModel?.onScreenDisposed()
                     vehicleDetailsViewModel?.onScreenDisposed()
                     selectedVehicleId = null
                     vehicleRoute = null
@@ -185,52 +160,12 @@ private fun DriveDataApp() {
     ) { innerPadding ->
         val routedModifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
         when (vehicleRoute) {
-            VehicleRoute.ADD ->
-                addVehicleViewModel?.let { viewModel ->
-                    AddVehicleScreen(
-                        viewModel = viewModel,
-                        onExit = { vehicleRoute = null },
-                        onSaved = { vehicleRoute = null },
-                        modifier = routedModifier,
-                    )
-                }
-
             VehicleRoute.DETAILS ->
                 vehicleDetailsViewModel?.let { viewModel ->
                     VehicleDetailsScreen(
                         viewModel = viewModel,
-                        onBack = {
-                            viewModel.onScreenDisposed()
-                            selectedVehicleId = null
-                            vehicleRoute = null
-                            destination = AppDestination.VEHICLES
-                        },
-                        onEdit = { vehicleId ->
-                            editReturnsToDetails = true
-                            selectedVehicleId = vehicleId
-                            vehicleRoute = VehicleRoute.EDIT
-                        },
-                        onDeleted = {
-                            selectedVehicleId = null
-                            vehicleRoute = null
-                            destination = AppDestination.VEHICLES
-                        },
-                        modifier = routedModifier,
-                    )
-                }
-
-            VehicleRoute.EDIT ->
-                editVehicleViewModel?.let { viewModel ->
-                    EditVehicleScreen(
-                        viewModel = viewModel,
-                        onBack = {
-                            vehicleRoute = if (editReturnsToDetails) VehicleRoute.DETAILS else null
-                            if (!editReturnsToDetails) selectedVehicleId = null
-                        },
-                        onSaved = {
-                            vehicleRoute = if (editReturnsToDetails) VehicleRoute.DETAILS else null
-                            if (!editReturnsToDetails) selectedVehicleId = null
-                        },
+                        onBack = ::closeDetails,
+                        onDeleted = ::closeDetails,
                         modifier = routedModifier,
                     )
                 }
@@ -251,18 +186,8 @@ private fun DriveDataApp() {
                         VehicleListScreen(
                             viewModel = vehicleListViewModel,
                             onBack = { destination = AppDestination.HOME },
-                            onAddVehicle = {
-                                addVehicleSession += 1
-                                vehicleRoute = VehicleRoute.ADD
-                            },
                             onOpenVehicle = { vehicleId ->
-                                selectedVehicleId = vehicleId
-                                vehicleRoute = VehicleRoute.DETAILS
-                            },
-                            onEditVehicle = { vehicleId ->
-                                editReturnsToDetails = false
-                                selectedVehicleId = vehicleId
-                                vehicleRoute = VehicleRoute.EDIT
+                                openDetails(vehicleId, AppDestination.VEHICLES)
                             },
                             modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
                         )
@@ -271,6 +196,9 @@ private fun DriveDataApp() {
                         ConnectionScreen(
                             viewModel = connectionViewModel,
                             onBack = { destination = AppDestination.HOME },
+                            onOpenVehicle = { vehicleId ->
+                                openDetails(vehicleId, AppDestination.CONNECTION)
+                            },
                             modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
                         )
 
