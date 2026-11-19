@@ -128,6 +128,30 @@ class DriveDataDatabaseMigrationTest {
             }
     }
 
+    @Test
+    fun migrate6To7_dropsLocalUsersAndKeepsTelemetry() {
+        helper.createDatabase(TEST_DATABASE, 6).apply {
+            execSQL(
+                "INSERT INTO `users` (`username`, `password_hash`, `password_salt`, `created_at_millis`) " +
+                    "VALUES ('admin', 'hash', 'salt', 1)",
+            )
+            execSQL(
+                "INSERT INTO `metric_records` (`id`, `owner_username`, `vin`, `collected_at_millis`, " +
+                    "`upload_status`) VALUES ('record', 'admin', 'VIN', 1, 'PENDING')",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(TEST_DATABASE, 7, true, DriveDataDatabase.MIGRATION_6_7)
+            .apply {
+                query("SELECT COUNT(*) FROM `metric_records`").use { cursor ->
+                    cursor.moveToFirst()
+                    assertEquals(1, cursor.getInt(0))
+                }
+                close()
+            }
+    }
+
     private companion object {
         const val TEST_DATABASE = "migration-test.db"
     }

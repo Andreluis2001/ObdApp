@@ -15,6 +15,7 @@ class TelemetrySyncWorker(
         val application = applicationContext as? DriveDataApplication ?: return Result.failure()
         val container = application.container
 
+        container.authSession.ensureRestored()
         val owner = container.authSession.signedInUser.value ?: return Result.success()
 
         return when (val result = container.telemetrySyncEngine.sync(owner)) {

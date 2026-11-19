@@ -18,13 +18,30 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 
 
+/** Raised when the ECU reports a different identity than the vehicle selected for collection. */
+class VinMismatchException(
+    val expectedVin: String,
+    val reportedVin: String?,
+) : Exception("VIN mismatch: expected '$expectedVin', reported '$reportedVin'")
+
 class ObdMetricsCollector(
     private val connectionManager: ObdConnectionManager,
     private val pollIntervalMs: Long = DEFAULT_POLL_INTERVAL_MS,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
 
-    fun stream(catalog: List<MetricDefinition>): Flow<MetricsSnapshot> =
+    /**
+     * Streams snapshots for [catalog] after checking that the ECU still reports [expectedVin],
+     * the VIN of the selected vehicle. A mismatch throws [VinMismatchException] before any metric
+     * is read so a snapshot can never be attributed to the wrong vehicle.
+     *
+     * [expectedVin] may be null for a legacy vehicle without a stored identity; in that case the
+     * VIN reported by the ECU is used as before.
+     */
+    fun stream(
+        expectedVin: String?,
+        catalog: List<MetricDefinition>,
+    ): Flow<MetricsSnapshot> =
         flow {
             if (catalog.isEmpty()) {
                 AppLog.i("OBD metric stream not started: no PIDs enabled for the active vehicle")
@@ -34,7 +51,7 @@ class ObdMetricsCollector(
                 AppLog.w("OBD metric stream not started: connection is ${connectionManager.state.value}")
                 return@flow
             }
-            val vin = readVin()
+            val vin = validatedVin(expectedVin, readVin())
             AppLog.i("OBD metric stream started (vin=${vin ?: "unknown"}, metrics=${catalog.size})")
             try {
                 while (currentCoroutineContext().isActive) {
@@ -86,7 +103,16 @@ class ObdMetricsCollector(
 
     private suspend fun readVin(): String? =
         readSafely(VINCommand())?.value?.trim()?.ifBlank { null }
- 
+
+    private fun validatedVin(expectedVin: String?, reportedVin: String?): String? {
+        if (expectedVin.isNullOrBlank()) return reportedVin
+        val selected = expectedVin.trim()
+        if (reportedVin == null || !reportedVin.equals(selected, ignoreCase = true)) {
+            throw VinMismatchException(expectedVin = selected, reportedVin = reportedVin)
+        }
+        return selected
+    }
+
     private suspend fun readSafely(command: ObdCommand): ObdResponse? =
         try {
             connectionManager.runCommand(command)

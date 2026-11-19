@@ -3,7 +3,7 @@ package com.app.drivedata.di
 import android.content.Context
 import com.app.drivedata.api.ApiClient
 import com.app.drivedata.auth.AuthSession
-import com.app.drivedata.auth.UserRepository
+import com.app.drivedata.auth.DataStoreAuthTokenStore
 import com.app.drivedata.connectivity.ConnectivityObserver
 import com.app.drivedata.metrics.ActiveVehicleCollection
 import com.app.drivedata.metrics.MetricsCollectionController
@@ -44,9 +44,14 @@ class AppContainer(context: Context) {
 
     private val database = DriveDataDatabase.build(appContext)
     val metricsRepository = MetricsRepository(database.metricRecordDao())
-    val usersRepository = UserRepository(database.userDao())
-    val authSession = AuthSession()
-    val vehicleRepository = VehicleRepository(database.vehicleDao(), authSession)
+
+    val authSession =
+        AuthSession(
+            api = ApiClient().authApi,
+            store = DataStoreAuthTokenStore(appContext),
+            scope = applicationScope,
+        )
+    val vehicleRepository = VehicleRepository(database.vehicleDao(), authSession.signedInUser)
     val activeVehicleSwitcher = ActiveVehicleSwitcher(vehicleRepository, obdConnectionManager)
 
     val activeVehicleCollection: StateFlow<ActiveVehicleCollection?> =
@@ -55,8 +60,14 @@ class AppContainer(context: Context) {
             .map { it?.toActiveVehicleCollection() }
             .stateIn(applicationScope, SharingStarted.Eagerly, null)
 
-    private val apiClient = ApiClient()
-    val telemetrySyncEngine = TelemetrySyncEngine(database.metricRecordDao(), apiClient.telemetryApi)
+    private val apiClient = ApiClient(tokenProvider = authSession)
+    val telemetrySyncEngine =
+        TelemetrySyncEngine(
+            dao = database.metricRecordDao(),
+            api = apiClient.telemetryApi,
+            refreshAuth = authSession::refresh,
+            onReauthenticationRequired = authSession::expireSession,
+        )
     val syncScheduler = SyncScheduler(appContext)
 
     val storageStatsProvider =
@@ -69,11 +80,13 @@ class AppContainer(context: Context) {
             activeVehicle = activeVehicleCollection,
             streamFactory = metricsCollector::stream,
             repository = metricsRepository,
-            authSession = authSession,
+            signedInUser = authSession.signedInUser,
+            disconnect = obdConnectionManager::disconnect,
             onSnapshotPersisted = syncScheduler::requestSync,
         )
 
     init {
+        applicationScope.launch { authSession.ensureRestored() }
         applicationScope.launch {
             metricsRepository.pruneUploadedBefore()
         }

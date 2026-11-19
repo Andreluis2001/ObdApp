@@ -7,12 +7,20 @@ import com.app.drivedata.vehicle.model.SupportedPid
 import com.app.drivedata.vehicle.model.Vehicle
 import com.app.drivedata.vehicle.model.VehicleCapabilities
 import com.app.drivedata.vehicle.model.VehicleDetails
+import com.app.drivedata.vehicle.model.VehicleIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ActiveVehicleCollectionTest {
+
+    @Test
+    fun mapsTheStoredVIN() {
+        val collection = vehicle().toActiveVehicleCollection()
+
+        assertEquals(VIN, collection.vin)
+    }
 
     @Test
     fun mapsOnlyEnabledCatalogPids() {
@@ -77,6 +85,7 @@ class ActiveVehicleCollectionTest {
             id = "vehicle-1",
             ownerUsername = "admin",
             details = VehicleDetails(make = "Chevrolet", model = "S10"),
+            identity = VehicleIdentity(vin = VIN, manufacturer = null, serialNumber = null),
             connection = Elm327Connection(host = HOST, port = PORT),
             capabilities = capabilities,
             isActive = true,
@@ -87,5 +96,6 @@ class ActiveVehicleCollectionTest {
     private companion object {
         const val HOST = "192.168.0.10"
         const val PORT = 35_000
+        const val VIN = "93YBSR7RHEJ298116"
     }
 }

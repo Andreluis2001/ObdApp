@@ -1,6 +1,5 @@
 package com.app.drivedata.metrics
 
-import com.app.drivedata.auth.AuthSession
 import com.app.drivedata.metrics.model.MetricId
 import com.app.drivedata.metrics.model.MetricReading
 import com.app.drivedata.metrics.model.MetricsSnapshot
@@ -10,7 +9,9 @@ import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.obd.model.ObdWifiConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -19,6 +20,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -168,7 +170,70 @@ class MetricsCollectionControllerTest {
             assertEquals(2, harness.requestedCatalogs.size)
         }
 
-    private class Harness(testScope: TestScope) {
+    @Test
+    fun passesTheSelectedVehicleVinToTheStream() =
+        runTest {
+            val harness = Harness(this)
+            harness.connection.value = connected()
+            harness.active.value = collection(vin = "WP0ZZZ99ZTS390000")
+
+            advanceUntilIdle()
+
+            assertEquals(listOf("WP0ZZZ99ZTS390000"), harness.requestedVins)
+        }
+
+    @Test
+    fun vinMismatch_stopsCollectionWarnsAndDisconnects() =
+        runTest {
+            val harness =
+                Harness(
+                    this,
+                    stream = { _, _ ->
+                        flow<MetricsSnapshot> { throw VinMismatchException("WP0ZZZ99ZTS390000", "MAT403096BNL00000") }
+                    },
+                )
+            harness.connection.value = connected()
+            harness.active.value = collection()
+
+            advanceUntilIdle()
+
+            val state = harness.controller.state.value
+            assertEquals(MetricsCollectionError.VIN_MISMATCH, state.error)
+            assertEquals(
+                VinMismatch("WP0ZZZ99ZTS390000", "MAT403096BNL00000"),
+                state.vinMismatch,
+            )
+            assertEquals(1, harness.disconnectCalls)
+            assertFalse(state.isCollecting)
+
+            harness.controller.dismissVinMismatch()
+            assertNull(harness.controller.state.value.vinMismatch)
+            assertNull(harness.controller.state.value.error)
+        }
+
+    @Test
+    fun losingTheActiveVehicleClearsTheVinMismatchWarning() =
+        runTest {
+            val harness =
+                Harness(
+                    this,
+                    stream = { _, _ -> flow<MetricsSnapshot> { throw VinMismatchException("WP0ZZZ99ZTS390000", null) } },
+                )
+            harness.connection.value = connected()
+            harness.active.value = collection()
+            advanceUntilIdle()
+            assertNotNull(harness.controller.state.value.vinMismatch)
+
+            harness.active.value = null
+            advanceUntilIdle()
+
+            assertNull(harness.controller.state.value.vinMismatch)
+        }
+
+    private class Harness(
+        testScope: TestScope,
+        stream: (String?, List<MetricDefinition>) -> Flow<MetricsSnapshot> = { _, _ -> flowOf(snapshot()) },
+    ) {
         private val scope =
             CoroutineScope(
                 testScope.backgroundScope.coroutineContext +
@@ -178,8 +243,10 @@ class MetricsCollectionControllerTest {
         val connection = MutableStateFlow<ObdConnectionState>(ObdConnectionState.Disconnected)
         val active = MutableStateFlow<ActiveVehicleCollection?>(null)
         val requestedCatalogs = mutableListOf<List<MetricDefinition>>()
+        val requestedVins = mutableListOf<String?>()
+        var disconnectCalls = 0
 
-        private val authSession = AuthSession().apply { signIn("admin") }
+        private val signedInUser = MutableStateFlow<String?>("admin")
         private val repository = MetricsRepository(FakeMetricRecordDao())
 
         val controller =
@@ -187,18 +254,21 @@ class MetricsCollectionControllerTest {
                 scope = scope,
                 connectionState = connection,
                 activeVehicle = active,
-                streamFactory = { catalog ->
+                streamFactory = { vin, catalog ->
+                    requestedVins += vin
                     requestedCatalogs += catalog
-                    flowOf(snapshot())
+                    stream(vin, catalog)
                 },
                 repository = repository,
-                authSession = authSession,
+                signedInUser = signedInUser,
+                disconnect = { disconnectCalls++ },
             )
     }
 
     private companion object {
         const val HOST = "192.168.0.10"
         const val PORT = 35_000
+        const val VIN = "93YBSR7RHEJ298116"
 
         val rpmDefinition: MetricDefinition =
             defaultMetricCatalog.first { it.id == MetricId.RPM }
@@ -208,6 +278,7 @@ class MetricsCollectionControllerTest {
         fun collection(
             vehicleId: String = "vehicle-1",
             host: String = HOST,
+            vin: String = VIN,
             catalog: List<MetricDefinition> = listOf(rpmDefinition),
             hasDiscovery: Boolean = true,
         ): ActiveVehicleCollection =
@@ -216,6 +287,7 @@ class MetricsCollectionControllerTest {
                 displayName = "Chevrolet S10",
                 host = host,
                 port = PORT,
+                vin = vin,
                 hasDiscovery = hasDiscovery,
                 catalog = catalog,
             )

@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.stateIn
 enum class MetricsError {
     STORAGE,
 
+    VIN_MISMATCH,
+
     UNEXPECTED,
 }
 
@@ -95,5 +97,6 @@ class MetricsViewModel(
 private fun MetricsCollectionError.toUiError(): MetricsError =
     when (this) {
         MetricsCollectionError.STORAGE -> MetricsError.STORAGE
+        MetricsCollectionError.VIN_MISMATCH -> MetricsError.VIN_MISMATCH
         MetricsCollectionError.UNEXPECTED -> MetricsError.UNEXPECTED
     }

@@ -6,8 +6,6 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.app.drivedata.auth.dao.UserDao
-import com.app.drivedata.auth.dao.UserEntity
 import com.app.drivedata.vehicle.dao.VehicleDao
 import com.app.drivedata.vehicle.entity.Elm327ConnectionEntity
 import com.app.drivedata.vehicle.entity.SupportedPidEntity
@@ -17,19 +15,16 @@ import com.app.drivedata.vehicle.entity.VehicleEntity
     entities = [
         MetricRecordEntity::class,
         MetricReadingEntity::class,
-        UserEntity::class,
         VehicleEntity::class,
         Elm327ConnectionEntity::class,
         SupportedPidEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class DriveDataDatabase : RoomDatabase() {
 
     abstract fun metricRecordDao(): MetricRecordDao
-
-    abstract fun userDao(): UserDao
 
     abstract fun vehicleDao(): VehicleDao
 
@@ -200,6 +195,14 @@ abstract class DriveDataDatabase : RoomDatabase() {
                 }
             }
 
+        /** Authentication now lives on the backend; the local password table is no longer used. */
+        internal val MIGRATION_6_7 =
+            object : Migration(6, 7) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("DROP TABLE IF EXISTS `users`")
+                }
+            }
+
         fun build(context: Context): DriveDataDatabase =
             Room.databaseBuilder(
                 context.applicationContext,
@@ -211,6 +214,7 @@ abstract class DriveDataDatabase : RoomDatabase() {
                 MIGRATION_3_4,
                 MIGRATION_4_5,
                 MIGRATION_5_6,
+                MIGRATION_6_7,
             )
                 .build()
     }

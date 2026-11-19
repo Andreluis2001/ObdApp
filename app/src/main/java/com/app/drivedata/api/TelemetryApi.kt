@@ -5,7 +5,7 @@ import retrofit2.http.POST
 
 interface TelemetryApi {
 
-    @POST("api/v1/telemetry/records/batch")
+    @POST("api/v1/telemetry/batches")
     suspend fun uploadBatch(@Body request: BatchUploadRequest): BatchUploadResponse
 
     companion object {

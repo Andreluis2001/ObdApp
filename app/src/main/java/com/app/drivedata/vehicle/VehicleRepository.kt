@@ -1,6 +1,5 @@
 package com.app.drivedata.vehicle
 
-import com.app.drivedata.auth.AuthSession
 import com.app.drivedata.vehicle.dao.VehicleDao
 import com.app.drivedata.vehicle.entity.Elm327ConnectionEntity
 import com.app.drivedata.vehicle.entity.SupportedPidEntity
@@ -13,6 +12,7 @@ import com.app.drivedata.vehicle.model.VehicleDetails
 import com.app.drivedata.vehicle.model.VehicleIdentity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -26,14 +26,14 @@ import java.util.UUID
  */
 class VehicleRepository(
     private val dao: VehicleDao,
-    private val authSession: AuthSession,
+    private val signedInUser: StateFlow<String?>,
     private val idGenerator: () -> String = { UUID.randomUUID().toString() },
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun observeVehicles(): Flow<List<Vehicle>> =
-        authSession.signedInUser.flatMapLatest { owner ->
+        signedInUser.flatMapLatest { owner ->
             if (owner == null) {
                 flowOf(emptyList())
             } else {
@@ -43,7 +43,7 @@ class VehicleRepository(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun observeActiveVehicle(): Flow<Vehicle?> =
-        authSession.signedInUser.flatMapLatest { owner ->
+        signedInUser.flatMapLatest { owner ->
             if (owner == null) {
                 flowOf(null)
             } else {
@@ -53,7 +53,7 @@ class VehicleRepository(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun observeVehicle(vehicleId: String): Flow<Vehicle?> =
-        authSession.signedInUser.flatMapLatest { owner ->
+        signedInUser.flatMapLatest { owner ->
             if (owner == null) {
                 flowOf(null)
             } else {
@@ -196,7 +196,7 @@ class VehicleRepository(
     suspend fun setPidEnabled(vehicleId: String, pid: Int, enabled: Boolean): Boolean =
         isOwned(vehicleId) && dao.setPidEnabled(vehicleId, pid, enabled) > 0
 
-    private fun currentOwner(): String? = authSession.signedInUser.value
+    private fun currentOwner(): String? = signedInUser.value
 
     private suspend fun isOwned(vehicleId: String): Boolean {
         val owner = currentOwner() ?: return false
