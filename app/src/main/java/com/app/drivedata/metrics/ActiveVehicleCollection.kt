@@ -8,13 +8,15 @@ import com.app.drivedata.vehicle.model.Vehicle
  *
  * [catalog] contains only catalog metrics whose PID was discovered for the vehicle and is still
  * enabled for collection. [host]/[port] identify the adapter the readings must come from, so a
- * connection to a different vehicle's adapter never collects this vehicle's PIDs.
+ * connection to a different vehicle's adapter never collects this vehicle's PIDs. [vin] is the
+ * identity this vehicle was discovered with; the metrics stream validates the ECU's VIN against it.
  */
 data class ActiveVehicleCollection(
     val vehicleId: String,
     val displayName: String,
     val host: String,
     val port: Int,
+    val vin: String?,
     val hasDiscovery: Boolean,
     val catalog: List<MetricDefinition>,
 ) {
@@ -34,6 +36,7 @@ fun Vehicle.toActiveVehicleCollection(
         displayName = displayName,
         host = connection.host,
         port = connection.port,
+        vin = identity?.vin?.trim()?.ifBlank { null },
         hasDiscovery = capabilities.hasDiscovery,
         catalog = catalog.filter { it.pid in enabledPids },
     )

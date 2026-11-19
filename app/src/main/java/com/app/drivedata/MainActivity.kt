@@ -43,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.app.drivedata.ui.common.VinMismatchDialog
 import com.app.drivedata.ui.connection.ConnectionScreen
 import com.app.drivedata.ui.connection.ConnectionViewModel
 import com.app.drivedata.ui.home.HomeScreen
@@ -124,6 +125,8 @@ private fun DriveDataApp() {
         viewModel(factory = MetricsViewModel.factory(application))
     val vehicleListViewModel: VehicleListViewModel =
         viewModel(factory = VehicleListViewModel.factory(application))
+    val collectionState by application.container.metricsCollectionController.state
+        .collectAsStateWithLifecycle()
 
     var destination by rememberSaveable { mutableStateOf(AppDestination.HOME) }
     var vehicleRoute by rememberSaveable { mutableStateOf<VehicleRoute?>(null) }
@@ -225,6 +228,11 @@ private fun DriveDataApp() {
                 }
         }
     }
+
+    VinMismatchDialog(
+        mismatch = collectionState.vinMismatch,
+        onDismiss = application.container.metricsCollectionController::dismissVinMismatch,
+    )
 }
 
 @Composable

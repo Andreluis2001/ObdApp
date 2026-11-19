@@ -166,6 +166,7 @@ class HomeViewModelTest {
             displayName = "Chevrolet S10",
             host = "192.168.0.10",
             port = 35_000,
+            vin = null,
             hasDiscovery = true,
             catalog = defaultMetricCatalog,
         )

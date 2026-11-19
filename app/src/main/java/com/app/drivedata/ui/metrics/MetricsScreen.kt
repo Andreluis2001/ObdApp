@@ -534,5 +534,6 @@ private fun ObdConnectionState.protocolName(): String? =
 private fun MetricsError.messageRes(): Int =
     when (this) {
         MetricsError.STORAGE -> R.string.metrics_error_storage
+        MetricsError.VIN_MISMATCH -> R.string.metrics_error_vin_mismatch
         MetricsError.UNEXPECTED -> R.string.metrics_error_unexpected
     }

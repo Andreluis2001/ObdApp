@@ -81,6 +81,7 @@ class AppContainer(context: Context) {
             streamFactory = metricsCollector::stream,
             repository = metricsRepository,
             signedInUser = authSession.signedInUser,
+            disconnect = obdConnectionManager::disconnect,
             onSnapshotPersisted = syncScheduler::requestSync,
         )
 

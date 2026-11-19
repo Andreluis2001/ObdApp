@@ -15,6 +15,7 @@
     <string name="action_back">Voltar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_close">Fechar</string>
+    <string name="action_understood">Entendi</string>
 
     <string name="connection_title">Conexão</string>
     <string name="connection_header_subtitle">ELM327 + Veículo</string>
@@ -133,6 +134,10 @@
     <string name="metrics_unavailable">Indisponível</string>
     <string name="metrics_error_storage">Não foi possível salvar as leituras neste dispositivo. Os valores ao vivo continuam sendo exibidos, mas não serão enviados.</string>
     <string name="metrics_error_unexpected">A coleta foi interrompida por um erro inesperado.</string>
+    <string name="metrics_error_vin_mismatch">O veículo conectado não corresponde ao veículo selecionado. A coleta foi interrompida.</string>
+    <string name="vin_mismatch_title">Veículo diferente detectado</string>
+    <string name="vin_mismatch_message">O veículo conectado informou o VIN %1$s, mas o veículo selecionado é %2$s. A conexão foi encerrada para não enviar dados do veículo errado.</string>
+    <string name="vin_mismatch_unavailable">Não foi possível ler o VIN do veículo conectado. A conexão foi encerrada para não enviar dados sem validação.</string>
     <string name="metrics_unit_pressure">kPa</string>
     <string name="metrics_unit_airflow">g/s</string>
 

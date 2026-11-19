@@ -34,7 +34,7 @@ class ObdMetricsCollectorTest {
             val manager = ObdConnectionManager(transportFactory = { transport })
             manager.connect(CONFIG)
 
-            val snapshot = manager.toCollector().stream(defaultMetricCatalog).first()
+            val snapshot = manager.toCollector().stream(EXPECTED_VIN, defaultMetricCatalog).first()
 
             assertEquals("93YBSR7RHEJ298116", snapshot.vin)
             assertEquals(8, snapshot.readings.size)
@@ -69,7 +69,7 @@ class ObdMetricsCollectorTest {
             val manager = ObdConnectionManager(transportFactory = { transport })
             manager.connect(CONFIG)
 
-            val snapshot = manager.toCollector().stream(defaultMetricCatalog).first()
+            val snapshot = manager.toCollector().stream(EXPECTED_VIN, defaultMetricCatalog).first()
 
             val coolant = snapshot.readingFor(MetricId.COOLANT_TEMPERATURE)
             assertEquals(ReadingValue.Unavailable, coolant.value)
@@ -78,29 +78,48 @@ class ObdMetricsCollectorTest {
         }
 
     @Test
-    fun stream_leavesVinNull_whenVinIsUnsupported() =
+    fun stream_failsWithVinMismatch_whenEcuReportsAnotherVehicle() =
         runBlocking {
-            val transport =
-                FakeObdTransport(
-                    connectScript() +
-                        elmScript(
-                            "NO DATA", // VIN
-                            "41 0C 10 A4",
-                            "41 0D 40",
-                            "41 05 7B",
-                            "41 04 80",
-                            "41 11 00",
-                            "41 0B 64",
-                            "41 10 00 00",
-                            "41 2F 80",
-                        ),
-                )
+            val transport = FakeObdTransport(connectScript() + elmScript(VIN_RESPONSE))
             val manager = ObdConnectionManager(transportFactory = { transport })
             manager.connect(CONFIG)
 
-            val snapshot = manager.toCollector().stream(defaultMetricCatalog).first()
+            val failure =
+                runCatching {
+                    manager.toCollector().stream("WP0ZZZ99ZTS390000", defaultMetricCatalog).first()
+                }.exceptionOrNull()
 
-            assertNull(snapshot.vin)
+            assertTrue("expected a VIN mismatch but was $failure", failure is VinMismatchException)
+            assertEquals("WP0ZZZ99ZTS390000", (failure as VinMismatchException).expectedVin)
+            assertEquals("93YBSR7RHEJ298116", failure.reportedVin)
+        }
+
+    @Test
+    fun stream_failsWithVinMismatch_whenVinIsUnsupported() =
+        runBlocking {
+            val transport = FakeObdTransport(connectScript() + elmScript("NO DATA"))
+            val manager = ObdConnectionManager(transportFactory = { transport })
+            manager.connect(CONFIG)
+
+            val failure =
+                runCatching {
+                    manager.toCollector().stream(EXPECTED_VIN, defaultMetricCatalog).first()
+                }.exceptionOrNull()
+
+            assertTrue("expected a VIN mismatch but was $failure", failure is VinMismatchException)
+            assertNull((failure as VinMismatchException).reportedVin)
+        }
+
+    @Test
+    fun stream_usesReportedVin_whenVehicleHasNoStoredVin() =
+        runBlocking {
+            val transport = FakeObdTransport(connectScript() + collectScript())
+            val manager = ObdConnectionManager(transportFactory = { transport })
+            manager.connect(CONFIG)
+
+            val snapshot = manager.toCollector().stream(null, defaultMetricCatalog).first()
+
+            assertEquals("93YBSR7RHEJ298116", snapshot.vin)
         }
 
     @Test
@@ -108,7 +127,7 @@ class ObdMetricsCollectorTest {
         runBlocking {
             val manager = ObdConnectionManager(transportFactory = { FakeObdTransport("") })
 
-            val snapshots = manager.toCollector().stream(defaultMetricCatalog).toList()
+            val snapshots = manager.toCollector().stream(EXPECTED_VIN, defaultMetricCatalog).toList()
 
             assertTrue("expected no emissions, got $snapshots", snapshots.isEmpty())
         }
@@ -118,7 +137,7 @@ class ObdMetricsCollectorTest {
         runBlocking {
             val manager = ObdConnectionManager(transportFactory = { FakeObdTransport("") })
 
-            val snapshots = manager.toCollector().stream(emptyList()).toList()
+            val snapshots = manager.toCollector().stream(EXPECTED_VIN, emptyList()).toList()
 
             assertTrue("expected no emissions, got $snapshots", snapshots.isEmpty())
         }
@@ -131,7 +150,7 @@ class ObdMetricsCollectorTest {
             manager.connect(CONFIG)
             assertTrue("setup failed: ${manager.state.value}", manager.state.value is ObdConnectionState.Connected)
 
-            val failure = runCatching { manager.toCollector().stream(defaultMetricCatalog).first() }.exceptionOrNull()
+            val failure = runCatching { manager.toCollector().stream(EXPECTED_VIN, defaultMetricCatalog).first() }.exceptionOrNull()
 
             assertTrue("expected IOException but was $failure", failure is IOException)
             val state = manager.state.value
@@ -178,6 +197,8 @@ class ObdMetricsCollectorTest {
 
     private companion object {
         val CONFIG = ObdWifiConfig(host = "192.168.0.10", port = 35000)
+
+        const val EXPECTED_VIN = "93YBSR7RHEJ298116"
 
         /** ISO9141-2/KWP format; parses to `93YBSR7RHEJ298116` per the library's own tests. */
         const val VIN_RESPONSE =

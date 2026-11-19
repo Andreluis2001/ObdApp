@@ -21,22 +21,31 @@ import java.io.IOException
 
 enum class MetricsCollectionError {
     STORAGE,
+    VIN_MISMATCH,
     UNEXPECTED,
 }
+
+/** Identity conflict that stopped a collection session; [reportedVin] is null if the ECU said nothing. */
+data class VinMismatch(
+    val expectedVin: String,
+    val reportedVin: String?,
+)
 
 data class MetricsCollectionState(
     val isCollecting: Boolean = false,
     val snapshot: MetricsSnapshot? = null,
     val error: MetricsCollectionError? = null,
+    val vinMismatch: VinMismatch? = null,
 )
 
 class MetricsCollectionController(
     private val scope: CoroutineScope,
     private val connectionState: StateFlow<ObdConnectionState>,
     private val activeVehicle: StateFlow<ActiveVehicleCollection?>,
-    private val streamFactory: (List<MetricDefinition>) -> Flow<MetricsSnapshot>,
+    private val streamFactory: (String?, List<MetricDefinition>) -> Flow<MetricsSnapshot>,
     private val repository: MetricsRepository,
     private val signedInUser: StateFlow<String?>,
+    private val disconnect: suspend () -> Unit = {},
     private val onSnapshotPersisted: () -> Unit = {},
 ) {
 
@@ -109,6 +118,7 @@ class MetricsCollectionController(
             lastVehicleId = vehicle?.vehicleId
             clearSnapshot()
             clearHistory()
+            clearVinMismatch()
         }
 
         if (!isCollectible(connection, vehicle)) {
@@ -156,7 +166,7 @@ class MetricsCollectionController(
         collectionJob =
             scope.launch {
                 try {
-                    streamFactory(vehicle.catalog).collect { snapshot ->
+                    streamFactory(vehicle.vin, vehicle.catalog).collect { snapshot ->
                         persist(snapshot)
                         _state.value = _state.value.copy(snapshot = snapshot)
                         _history.update { current -> current.appendedWith(snapshot) }
@@ -167,6 +177,29 @@ class MetricsCollectionController(
                     }
                 } catch (e: CancellationException) {
                     throw e
+                } catch (mismatch: VinMismatchException) {
+                    // Set the warning before dropping the link: disconnecting updates the
+                    // connection flow, which stops this job and may cancel it mid-catch.
+                    AppLog.e(
+                        "VIN mismatch: selected='${mismatch.expectedVin}', " +
+                            "reported='${mismatch.reportedVin ?: "none"}'; disconnecting",
+                    )
+                    _state.value =
+                        _state.value.copy(
+                            error = MetricsCollectionError.VIN_MISMATCH,
+                            vinMismatch =
+                                VinMismatch(
+                                    expectedVin = mismatch.expectedVin,
+                                    reportedVin = mismatch.reportedVin,
+                                ),
+                        )
+                    try {
+                        disconnect()
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        AppLog.w("Could not close the adapter after a VIN mismatch", error)
+                    }
                 } catch (error: IOException) {
                     AppLog.w("Metrics collection stopped by an I/O error", error)
                 } catch (error: Exception) {
@@ -197,6 +230,19 @@ class MetricsCollectionController(
     private fun clearHistory() {
         _history.value = emptyMap()
     }
+
+    private fun clearVinMismatch() {
+        val current = _state.value
+        if (current.vinMismatch == null && current.error != MetricsCollectionError.VIN_MISMATCH) return
+        _state.value =
+            current.copy(
+                vinMismatch = null,
+                error = if (current.error == MetricsCollectionError.VIN_MISMATCH) null else current.error,
+            )
+    }
+
+    /** Acknowledges the VIN warning shown to the user. */
+    fun dismissVinMismatch() = clearVinMismatch()
 
     private suspend fun persist(snapshot: MetricsSnapshot) {
         val owner = signedInUser.value
