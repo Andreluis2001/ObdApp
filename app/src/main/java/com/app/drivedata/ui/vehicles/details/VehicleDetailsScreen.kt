@@ -51,6 +51,7 @@ import com.app.drivedata.ui.common.InfoRow
 import com.app.drivedata.ui.common.LightStatusBarIcons
 import com.app.drivedata.ui.common.PrimaryButton
 import com.app.drivedata.ui.common.RowDivider
+import com.app.drivedata.ui.common.ScreenHeader
 import com.app.drivedata.ui.common.SectionHeader
 import com.app.drivedata.ui.common.SecondaryButton
 import com.app.drivedata.ui.common.StatusLabel
@@ -67,7 +68,6 @@ import com.app.drivedata.ui.theme.HomeTextSecondary
 import com.app.drivedata.ui.vehicles.components.ActiveBadge
 import com.app.drivedata.ui.vehicles.components.DiscoveredPidRow
 import com.app.drivedata.ui.vehicles.components.VehicleErrorBanner
-import com.app.drivedata.ui.vehicles.components.VehicleHeader
 import com.app.drivedata.ui.vehicles.components.color
 import com.app.drivedata.ui.vehicles.components.label
 import com.app.drivedata.ui.vehicles.components.lastCommunicationText
@@ -98,7 +98,7 @@ fun VehicleDetailsScreen(
                 .fillMaxSize()
                 .background(HomeBackground),
     ) {
-        VehicleHeader(
+        ScreenHeader(
             title = vehicle?.displayName ?: stringResource(R.string.vehicle_details_title),
             subtitle = stringResource(R.string.vehicle_details_subtitle),
             onBack = onBack,

@@ -127,6 +127,53 @@ class MetricRecordDaoTest {
         }
 
     @Test
+    fun observeRecentRecords_returnsOwnersNewestRecordsWithReadingCount() =
+        runBlocking {
+            insertRecord("older", collectedAtMillis = 1_000L)
+            insertRecord("newer", collectedAtMillis = 2_000L)
+            dao.insertReadings(
+                listOf(
+                    MetricReadingEntity("newer", MetricId.SPEED.name, "km/h", 60.0, true),
+                    MetricReadingEntity(
+                        "newer",
+                        MetricId.COOLANT_TEMPERATURE.name,
+                        "°C",
+                        87.0,
+                        true,
+                    ),
+                ),
+            )
+            insertRecord("other", owner = "someone-else", collectedAtMillis = 3_000L)
+
+            val records = dao.observeRecentRecords("admin").first()
+
+            assertEquals(listOf("newer", "older"), records.map { it.id })
+            assertEquals(3, records.first().readingCount)
+            assertEquals(UploadStatus.PENDING, records.first().uploadStatus)
+        }
+
+    @Test
+    fun observeRecentRecords_appliesTheLimit() =
+        runBlocking {
+            insertRecord("older", collectedAtMillis = 1_000L)
+            insertRecord("newer", collectedAtMillis = 2_000L)
+
+            val records = dao.observeRecentRecords("admin", limit = 1).first()
+
+            assertEquals(listOf("newer"), records.map { it.id })
+        }
+
+    @Test
+    fun observeTotalCount_countsOnlyTheOwnersRecords() =
+        runBlocking {
+            insertRecord("mine-1", collectedAtMillis = 1_000L)
+            insertRecord("mine-2", collectedAtMillis = 2_000L, status = UploadStatus.UPLOADED)
+            insertRecord("other", owner = "someone-else", collectedAtMillis = 3_000L)
+
+            assertEquals(2, dao.observeTotalCount("admin").first())
+        }
+
+    @Test
     fun pruneUploadedBefore_removesOnlyOldUploadedRecordsAndTheirReadings() =
         runBlocking {
             insertRecord("old-uploaded", collectedAtMillis = 1_000L, status = UploadStatus.UPLOADED, uploadedAtMillis = 1_000L)

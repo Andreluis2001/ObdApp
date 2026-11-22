@@ -14,12 +14,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -52,6 +56,10 @@ import com.app.drivedata.ui.login.LoginScreen
 import com.app.drivedata.ui.login.LoginViewModel
 import com.app.drivedata.ui.metrics.MetricsScreen
 import com.app.drivedata.ui.metrics.MetricsViewModel
+import com.app.drivedata.ui.offline.OfflineScreen
+import com.app.drivedata.ui.offline.OfflineViewModel
+import com.app.drivedata.ui.profile.ProfileScreen
+import com.app.drivedata.ui.profile.ProfileViewModel
 import com.app.drivedata.ui.theme.DriveDataTheme
 import com.app.drivedata.ui.theme.HomeBackground
 import com.app.drivedata.ui.theme.HomeBlue
@@ -84,11 +92,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class AppDestination(val labelRes: Int) {
+private enum class AppDestination(
+    val labelRes: Int,
+    val inBottomBar: Boolean = true,
+) {
     HOME(R.string.tab_home),
     VEHICLES(R.string.tab_vehicles),
-    CONNECTION(R.string.tab_connection),
     METRICS(R.string.tab_metrics),
+    OFFLINE(R.string.tab_offline),
+    PROFILE(R.string.tab_profile),
+    CONNECTION(R.string.tab_connection, inBottomBar = false),
 }
 
 private enum class VehicleRoute { DETAILS }
@@ -125,6 +138,10 @@ private fun DriveDataApp() {
         viewModel(factory = MetricsViewModel.factory(application))
     val vehicleListViewModel: VehicleListViewModel =
         viewModel(factory = VehicleListViewModel.factory(application))
+    val profileViewModel: ProfileViewModel =
+        viewModel(factory = ProfileViewModel.factory(application))
+    val offlineViewModel: OfflineViewModel =
+        viewModel(factory = OfflineViewModel.factory(application))
     val collectionState by application.container.metricsCollectionController.state
         .collectAsStateWithLifecycle()
 
@@ -132,6 +149,8 @@ private fun DriveDataApp() {
     var vehicleRoute by rememberSaveable { mutableStateOf<VehicleRoute?>(null) }
     var selectedVehicleId by rememberSaveable { mutableStateOf<String?>(null) }
     var detailsReturnDestination by rememberSaveable { mutableStateOf(AppDestination.VEHICLES) }
+    var vehiclesReturnDestination by rememberSaveable { mutableStateOf(AppDestination.HOME) }
+    var connectionReturnDestination by rememberSaveable { mutableStateOf(AppDestination.PROFILE) }
     val detailsVehicleId = selectedVehicleId
     val vehicleDetailsViewModel: VehicleDetailsViewModel? =
         if (vehicleRoute == VehicleRoute.DETAILS && detailsVehicleId != null) {
@@ -165,11 +184,17 @@ private fun DriveDataApp() {
         containerColor = HomeBackground,
         bottomBar = {
             AppBottomBar(
-                selected = if (vehicleRoute == null) destination else null,
+                selected = when {
+                    vehicleRoute != null -> null
+                    destination == AppDestination.CONNECTION -> AppDestination.PROFILE
+                    else -> destination
+                },
                 onSelect = { target ->
                     vehicleDetailsViewModel?.onScreenDisposed()
                     selectedVehicleId = null
                     vehicleRoute = null
+                    vehiclesReturnDestination = AppDestination.HOME
+                    connectionReturnDestination = AppDestination.PROFILE
                     destination = target
                 },
             )
@@ -195,14 +220,17 @@ private fun DriveDataApp() {
                             onSeeAllReadings = { destination = AppDestination.METRICS },
                             onOpenVehicles = { destination = AppDestination.VEHICLES },
                             onSelectVehicle = homeViewModel::selectVehicle,
-                            onSignOut = authSession::signOut,
                             modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
                         )
 
                     AppDestination.VEHICLES ->
                         VehicleListScreen(
                             viewModel = vehicleListViewModel,
-                            onBack = { destination = AppDestination.HOME },
+                            onBack = {
+                                val target = vehiclesReturnDestination
+                                vehiclesReturnDestination = AppDestination.HOME
+                                destination = target
+                            },
                             onOpenVehicle = { vehicleId ->
                                 openDetails(vehicleId, AppDestination.VEHICLES)
                             },
@@ -212,7 +240,11 @@ private fun DriveDataApp() {
                     AppDestination.CONNECTION ->
                         ConnectionScreen(
                             viewModel = connectionViewModel,
-                            onBack = { destination = AppDestination.HOME },
+                            onBack = {
+                                val target = connectionReturnDestination
+                                connectionReturnDestination = AppDestination.HOME
+                                destination = target
+                            },
                             onOpenVehicle = { vehicleId ->
                                 openDetails(vehicleId, AppDestination.CONNECTION)
                             },
@@ -223,6 +255,28 @@ private fun DriveDataApp() {
                         MetricsScreen(
                             viewModel = metricsViewModel,
                             onBack = { destination = AppDestination.HOME },
+                            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
+                        )
+
+                    AppDestination.OFFLINE ->
+                        OfflineScreen(
+                            viewModel = offlineViewModel,
+                            onBack = { destination = AppDestination.HOME },
+                            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
+                        )
+
+                    AppDestination.PROFILE ->
+                        ProfileScreen(
+                            viewModel = profileViewModel,
+                            onOpenVehicles = {
+                                vehiclesReturnDestination = AppDestination.PROFILE
+                                destination = AppDestination.VEHICLES
+                            },
+                            onOpenConnection = {
+                                connectionReturnDestination = AppDestination.PROFILE
+                                destination = AppDestination.CONNECTION
+                            },
+                            onSignOut = authSession::signOut,
                             modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
                         )
                 }
@@ -250,7 +304,7 @@ private fun AppBottomBar(
             containerColor = HomeSurface,
             tonalElevation = 0.dp,
         ) {
-            AppDestination.entries.forEach { destination ->
+            AppDestination.entries.filter { it.inBottomBar }.forEach { destination ->
                 val isSelected = destination == selected
                 NavigationBarItem(
                     selected = isSelected,
@@ -282,4 +336,8 @@ private fun navIcon(destination: AppDestination, selected: Boolean): ImageVector
             if (selected) Icons.Filled.DirectionsCar else Icons.Outlined.DirectionsCar
         AppDestination.CONNECTION -> if (selected) Icons.Filled.Wifi else Icons.Outlined.Wifi
         AppDestination.METRICS -> if (selected) Icons.Filled.BarChart else Icons.Outlined.BarChart
+        AppDestination.OFFLINE ->
+            if (selected) Icons.Filled.CloudDownload else Icons.Outlined.CloudDownload
+
+        AppDestination.PROFILE -> if (selected) Icons.Filled.Person else Icons.Outlined.Person
     }

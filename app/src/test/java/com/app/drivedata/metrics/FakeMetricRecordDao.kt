@@ -4,6 +4,7 @@ import com.app.drivedata.metrics.dao.MetricReadingEntity
 import com.app.drivedata.metrics.dao.MetricRecordDao
 import com.app.drivedata.metrics.dao.MetricRecordEntity
 import com.app.drivedata.metrics.dao.MetricRecordWithReadings
+import com.app.drivedata.metrics.dao.StoredRecordSummary
 import com.app.drivedata.metrics.model.MetricId
 import com.app.drivedata.metrics.model.UploadStatus
 import kotlinx.coroutines.flow.Flow
@@ -129,6 +130,34 @@ class FakeMetricRecordDao : MetricRecordDao {
                 .mapNotNull { it.uploadedAtMillis }
                 .maxOrNull(),
         )
+
+    override fun observeRecentRecords(
+        owner: String,
+        limit: Int,
+    ): Flow<List<StoredRecordSummary>> =
+        flowOf(
+            records
+                .filter { it.ownerUsername == owner }
+                .sortedWith(
+                    compareByDescending<MetricRecordEntity> { it.collectedAtMillis }
+                        .thenByDescending { it.id },
+                )
+                .take(limit)
+                .map { record ->
+                    StoredRecordSummary(
+                        id = record.id,
+                        vin = record.vin,
+                        collectedAtMillis = record.collectedAtMillis,
+                        uploadStatus = record.uploadStatus,
+                        uploadedAtMillis = record.uploadedAtMillis,
+                        lastError = record.lastError,
+                        readingCount = readingsFor(record.id).size,
+                    )
+                },
+        )
+
+    override fun observeTotalCount(owner: String): Flow<Int> =
+        flowOf(records.count { it.ownerUsername == owner })
 
     override suspend fun deleteReadingsForUploadedBefore(
         cutoffMillis: Long,
