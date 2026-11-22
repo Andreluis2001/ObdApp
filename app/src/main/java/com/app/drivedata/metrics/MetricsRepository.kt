@@ -4,9 +4,11 @@ import com.app.drivedata.metrics.dao.MetricReadingEntity
 import com.app.drivedata.metrics.dao.MetricRecordDao
 import com.app.drivedata.metrics.dao.MetricRecordEntity
 import com.app.drivedata.metrics.dao.StoredRecordSummary
+import com.app.drivedata.metrics.model.MetricRecord
 import com.app.drivedata.metrics.model.MetricsSnapshot
 import com.app.drivedata.metrics.model.UploadStatus
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.util.UUID
 
 class MetricsRepository(
@@ -50,6 +52,9 @@ class MetricsRepository(
         ownerUsername: String,
         limit: Int = MetricRecordDao.DEFAULT_RECENT_LIMIT,
     ): Flow<List<StoredRecordSummary>> = dao.observeRecentRecords(ownerUsername, limit)
+
+    fun observeRecord(recordId: String): Flow<MetricRecord?> =
+        dao.observeWithReadingsById(recordId).map { it?.toRecord() }
 
     suspend fun pruneUploadedBefore(cutoffMillis: Long = clock() - DEFAULT_RETENTION_MILLIS): Int =
         dao.pruneUploadedBefore(cutoffMillis)

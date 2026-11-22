@@ -29,6 +29,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -57,7 +58,7 @@ import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
 import java.util.Locale
 
-private enum class OfflineRoute { SUMMARY, RECORDS }
+private enum class OfflineRoute { SUMMARY, RECORDS, DETAILS }
 
 @Composable
 fun OfflineScreen(
@@ -66,11 +67,41 @@ fun OfflineScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val detailsState by viewModel.selectedRecordState.collectAsStateWithLifecycle()
     LightStatusBarIcons()
 
     var route by rememberSaveable { mutableStateOf(OfflineRoute.SUMMARY) }
-    BackHandler(enabled = route == OfflineRoute.RECORDS) {
-        route = OfflineRoute.SUMMARY
+    var selectedRecordId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    fun openRecord(recordId: String) {
+        selectedRecordId = recordId
+        viewModel.selectRecord(recordId)
+        route = OfflineRoute.DETAILS
+    }
+
+    fun closeDetails() {
+        viewModel.selectRecord(null)
+        selectedRecordId = null
+        route = OfflineRoute.RECORDS
+    }
+
+    LaunchedEffect(route, selectedRecordId) {
+        if (route == OfflineRoute.DETAILS) {
+            val recordId = selectedRecordId
+            if (recordId == null) {
+                route = OfflineRoute.RECORDS
+            } else {
+                viewModel.selectRecord(recordId)
+            }
+        }
+    }
+
+    BackHandler(enabled = route != OfflineRoute.SUMMARY) {
+        when (route) {
+            OfflineRoute.DETAILS -> closeDetails()
+            OfflineRoute.RECORDS -> route = OfflineRoute.SUMMARY
+            OfflineRoute.SUMMARY -> Unit
+        }
     }
 
     when (route) {
@@ -86,6 +117,14 @@ fun OfflineScreen(
             StoredRecordsScreen(
                 state = state,
                 onBack = { route = OfflineRoute.SUMMARY },
+                onOpenRecord = { recordId -> openRecord(recordId) },
+                modifier = modifier,
+            )
+
+        OfflineRoute.DETAILS ->
+            MetricDetailsScreen(
+                state = detailsState,
+                onBack = { closeDetails() },
                 modifier = modifier,
             )
     }

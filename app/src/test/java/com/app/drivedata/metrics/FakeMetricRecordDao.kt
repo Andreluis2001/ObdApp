@@ -69,6 +69,9 @@ class FakeMetricRecordDao : MetricRecordDao {
     override suspend fun findWithReadingsById(id: String): MetricRecordWithReadings? =
         records.firstOrNull { it.id == id }?.withReadings()
 
+    override fun observeWithReadingsById(id: String): Flow<MetricRecordWithReadings?> =
+        flowOf(records.firstOrNull { it.id == id }?.withReadings())
+
     override suspend fun markUploaded(
         ids: List<String>,
         status: UploadStatus,

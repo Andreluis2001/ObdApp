@@ -1,6 +1,10 @@
 package com.app.drivedata.ui.offline
 
 import com.app.drivedata.metrics.dao.StoredRecordSummary
+import com.app.drivedata.metrics.model.MetricId
+import com.app.drivedata.metrics.model.MetricReading
+import com.app.drivedata.metrics.model.MetricRecord
+import com.app.drivedata.metrics.model.ReadingValue
 import com.app.drivedata.metrics.model.UploadStatus
 import com.app.drivedata.storage.StorageStats
 import com.app.drivedata.sync.SyncError
@@ -124,6 +128,49 @@ class OfflineViewModelTest {
             assertFalse(state.isSyncing)
         }
 
+    @Test
+    fun exposesSelectedRecordDetails() =
+        runTest {
+            val record = metricRecord("record-1")
+            val viewModel =
+                offlineViewModel(
+                    recordById = { id -> flowOf(record.takeIf { it.id == id }) },
+                )
+
+            viewModel.selectRecord("record-1")
+
+            val state = viewModel.awaitDetails { it is RecordDetailsUiState.Loaded }
+            val loaded = state as RecordDetailsUiState.Loaded
+            assertEquals("record-1", loaded.record?.id)
+            assertEquals(2, loaded.record?.readings?.size)
+            assertEquals(UploadStatus.PENDING, loaded.record?.uploadStatus)
+        }
+
+    @Test
+    fun clearsSelectedRecordDetailsWhenClosed() =
+        runTest {
+            val viewModel =
+                offlineViewModel(recordById = { flowOf(metricRecord("record-1")) })
+
+            viewModel.selectRecord("record-1")
+            viewModel.awaitDetails { it is RecordDetailsUiState.Loaded }
+            viewModel.selectRecord(null)
+
+            val state = viewModel.awaitDetails { it is RecordDetailsUiState.Idle }
+            assertEquals(RecordDetailsUiState.Idle, state)
+        }
+
+    @Test
+    fun reportsMissingRecordAsLoadedWithoutRecord() =
+        runTest {
+            val viewModel = offlineViewModel(recordById = { flowOf(null) })
+
+            viewModel.selectRecord("missing")
+
+            val state = viewModel.awaitDetails { it is RecordDetailsUiState.Loaded }
+            assertNull((state as RecordDetailsUiState.Loaded).record)
+        }
+
     private fun offlineViewModel(
         username: MutableStateFlow<String?> = MutableStateFlow("user"),
         pendingCount: Flow<Int> = flowOf(2),
@@ -132,6 +179,7 @@ class OfflineViewModelTest {
         totalCount: Flow<Int> = flowOf(10),
         lastSynced: Flow<Long?> = flowOf(4_000L),
         records: Flow<List<StoredRecordSummary>> = flowOf(listOf(storedRecord())),
+        recordById: (String) -> Flow<MetricRecord?> = { flowOf(null) },
         syncStatus: MutableStateFlow<SyncStatus> = MutableStateFlow(SyncStatus()),
         storageStats: Flow<StorageStats> =
             flowOf(StorageStats(usedBytes = 100L, budgetBytes = 1_000L)),
@@ -146,6 +194,7 @@ class OfflineViewModelTest {
             totalCount = { totalCount },
             lastSyncedAtMillis = { lastSynced },
             recentRecords = { _, _ -> records },
+            recordById = recordById,
             syncStatus = syncStatus,
             storageStats = storageStats,
             internetAvailable = internetAvailable,
@@ -154,6 +203,24 @@ class OfflineViewModelTest {
 
     private suspend fun OfflineViewModel.awaitState(predicate: (OfflineUiState) -> Boolean): OfflineUiState =
         withTimeout(5_000L) { uiState.first(predicate) }
+
+    private suspend fun OfflineViewModel.awaitDetails(
+        predicate: (RecordDetailsUiState) -> Boolean,
+    ): RecordDetailsUiState = withTimeout(5_000L) { selectedRecordState.first(predicate) }
+
+    private fun metricRecord(id: String): MetricRecord =
+        MetricRecord(
+            id = id,
+            ownerUsername = "user",
+            vin = "93YBSR7RHEJ298116",
+            collectedAtMillis = 1_000L,
+            readings =
+                listOf(
+                    MetricReading(MetricId.RPM, "rpm", ReadingValue.Available(900.0)),
+                    MetricReading(MetricId.SPEED, "km/h", ReadingValue.Unavailable),
+                ),
+            uploadStatus = UploadStatus.PENDING,
+        )
 
     private fun storedRecord(): StoredRecordSummary =
         StoredRecordSummary(

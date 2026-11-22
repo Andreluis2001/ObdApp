@@ -37,6 +37,11 @@ interface MetricRecordDao {
     @Query("SELECT * FROM metric_records WHERE id = :id LIMIT 1")
     suspend fun findWithReadingsById(id: String): MetricRecordWithReadings?
 
+    /** Observable variant used by the offline details screen so status changes are reflected. */
+    @Transaction
+    @Query("SELECT * FROM metric_records WHERE id = :id LIMIT 1")
+    fun observeWithReadingsById(id: String): Flow<MetricRecordWithReadings?>
+
     @Query(
         "UPDATE metric_records SET upload_status = :status, uploaded_at_millis = :uploadedAtMillis, " +
             "last_error = NULL WHERE id IN (:ids) AND upload_status = :pendingStatus",

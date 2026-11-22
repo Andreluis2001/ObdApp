@@ -3,8 +3,6 @@ package com.app.drivedata.ui.profile
 import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.obd.model.ObdWifiConfig
-import com.app.drivedata.sync.SyncError
-import com.app.drivedata.sync.SyncStatus
 import com.app.drivedata.vehicle.model.Elm327Connection
 import com.app.drivedata.vehicle.model.Vehicle
 import com.app.drivedata.vehicle.model.VehicleCapabilities
@@ -106,24 +104,6 @@ class ProfileViewModelTest {
         }
 
     @Test
-    fun exposesPendingDataAndSyncError() =
-        runTest {
-            val viewModel =
-                profileViewModel(
-                    pendingCount = flowOf(3),
-                    rejectedCount = flowOf(1),
-                    lastSyncedAtMillis = flowOf(4_000L),
-                    syncStatus = MutableStateFlow(SyncStatus(lastError = SyncError.NETWORK)),
-                )
-
-            val state = viewModel.awaitState { it.pendingCount == 3 }
-
-            assertEquals(1, state.rejectedCount)
-            assertEquals(4_000L, state.lastSyncedAtMillis)
-            assertEquals(SyncError.NETWORK, state.syncError)
-        }
-
-    @Test
     fun exposesConfiguredCollectionInterval() =
         runTest {
             val viewModel = profileViewModel(collectionIntervalSeconds = 60L)
@@ -153,22 +133,14 @@ class ProfileViewModelTest {
         vehicles: Flow<List<Vehicle>> = flowOf(emptyList()),
         connection: MutableStateFlow<ObdConnectionState> =
             MutableStateFlow(ObdConnectionState.Disconnected),
-        pendingCount: Flow<Int> = flowOf(0),
-        rejectedCount: Flow<Int> = flowOf(0),
-        lastSyncedAtMillis: Flow<Long?> = flowOf(null),
         internetAvailable: Flow<Boolean> = flowOf(false),
-        syncStatus: MutableStateFlow<SyncStatus> = MutableStateFlow(SyncStatus()),
         collectionIntervalSeconds: Long = 1L,
     ): ProfileViewModel =
         ProfileViewModel(
             signedInUser = username,
             vehicles = vehicles,
             connectionState = connection,
-            pendingCount = pendingCount,
-            rejectedCount = rejectedCount,
-            lastSyncedAtMillis = lastSyncedAtMillis,
             internetAvailable = internetAvailable,
-            syncStatus = syncStatus,
             collectionIntervalSeconds = collectionIntervalSeconds,
         )
 

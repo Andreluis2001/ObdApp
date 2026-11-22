@@ -1,6 +1,7 @@
 package com.app.drivedata.ui.offline
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,11 +11,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,7 +35,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.app.drivedata.R
 import com.app.drivedata.metrics.dao.StoredRecordSummary
-import com.app.drivedata.metrics.model.UploadStatus
 import com.app.drivedata.ui.common.ScreenHeader
 import com.app.drivedata.ui.common.formatDateTime
 import com.app.drivedata.ui.theme.HomeBackground
@@ -47,6 +49,7 @@ import com.app.drivedata.ui.theme.HomeTextSecondary
 fun StoredRecordsScreen(
     state: OfflineUiState,
     onBack: () -> Unit,
+    onOpenRecord: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -76,7 +79,10 @@ fun StoredRecordsScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(items = state.records, key = { it.id }) { record ->
-                        RecordCard(record = record)
+                        RecordCard(
+                            record = record,
+                            onClick = { onOpenRecord(record.id) },
+                        )
                     }
                     if (state.records.size >= state.recentLimit) {
                         item {
@@ -160,7 +166,10 @@ private fun StatusCountCard(
 }
 
 @Composable
-private fun RecordCard(record: StoredRecordSummary) {
+private fun RecordCard(
+    record: StoredRecordSummary,
+    onClick: () -> Unit,
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = HomeSurface),
@@ -169,6 +178,7 @@ private fun RecordCard(record: StoredRecordSummary) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable(onClick = onClick)
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -181,13 +191,16 @@ private fun RecordCard(record: StoredRecordSummary) {
                     modifier = Modifier.weight(1f),
                 )
                 StatusPill(status = record.uploadStatus)
+                Spacer(Modifier.width(6.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.offline_record_view_details),
+                    tint = HomeTextSecondary,
+                    modifier = Modifier.size(18.dp),
+                )
             }
             Text(
-                text = if (record.vin.isNullOrBlank()) {
-                    stringResource(R.string.offline_record_vin_unknown)
-                } else {
-                    stringResource(R.string.offline_record_vin, record.vin)
-                },
+                text = recordVinText(record.vin),
                 style = MaterialTheme.typography.bodySmall,
                 color = HomeTextSecondary,
             )
@@ -201,71 +214,17 @@ private fun RecordCard(record: StoredRecordSummary) {
                 color = HomeTextSecondary,
             )
             Text(
-                text = recordDetail(record),
+                text = recordStatusDetail(
+                    status = record.uploadStatus,
+                    uploadedAtMillis = record.uploadedAtMillis,
+                    lastError = record.lastError,
+                ),
                 style = MaterialTheme.typography.labelSmall,
-                color = detailColor(record.uploadStatus),
+                color = statusColor(record.uploadStatus),
             )
         }
     }
 }
-
-@Composable
-private fun StatusPill(status: UploadStatus) {
-    val label: String
-    val color: Color
-    when (status) {
-        UploadStatus.PENDING -> {
-            label = stringResource(R.string.offline_status_pending)
-            color = HomeOrange
-        }
-        UploadStatus.UPLOADED -> {
-            label = stringResource(R.string.offline_status_uploaded)
-            color = HomeGreen
-        }
-        UploadStatus.REJECTED -> {
-            label = stringResource(R.string.offline_status_rejected)
-            color = HomeRed
-        }
-    }
-    Box(
-        modifier = Modifier
-            .background(color.copy(alpha = 0.12f), RoundedCornerShape(50))
-            .padding(horizontal = 8.dp, vertical = 3.dp),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = color,
-        )
-    }
-}
-
-@Composable
-private fun recordDetail(record: StoredRecordSummary): String =
-    when (record.uploadStatus) {
-        UploadStatus.UPLOADED ->
-            stringResource(
-                R.string.offline_record_uploaded_at,
-                record.uploadedAtMillis?.let(::formatDateTime)
-                    ?: stringResource(R.string.vehicle_never),
-            )
-
-        UploadStatus.PENDING -> stringResource(R.string.offline_record_waiting)
-
-        UploadStatus.REJECTED ->
-            record.lastError
-                ?.let { stringResource(R.string.offline_record_rejected_reason, it) }
-                ?: stringResource(R.string.offline_status_rejected)
-    }
-
-@Composable
-private fun detailColor(status: UploadStatus): Color =
-    when (status) {
-        UploadStatus.PENDING -> HomeOrange
-        UploadStatus.UPLOADED -> HomeGreen
-        UploadStatus.REJECTED -> HomeRed
-    }
 
 @Composable
 private fun EmptyRecords() {

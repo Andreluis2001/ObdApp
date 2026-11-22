@@ -9,16 +9,20 @@ import com.app.drivedata.DriveDataApplication
 import com.app.drivedata.metrics.MetricsRepository
 import com.app.drivedata.metrics.dao.MetricRecordDao
 import com.app.drivedata.metrics.dao.StoredRecordSummary
+import com.app.drivedata.metrics.model.MetricRecord
 import com.app.drivedata.storage.StorageStats
 import com.app.drivedata.sync.SyncError
 import com.app.drivedata.sync.SyncStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
 data class OfflineUiState(
@@ -38,6 +42,15 @@ data class OfflineUiState(
     val recentLimit: Int = MetricRecordDao.DEFAULT_RECENT_LIMIT,
 )
 
+/** State of the record currently opened in the offline metric details screen. */
+sealed interface RecordDetailsUiState {
+    data object Idle : RecordDetailsUiState
+
+    data object Loading : RecordDetailsUiState
+
+    data class Loaded(val record: MetricRecord?) : RecordDetailsUiState
+}
+
 /**
  * Feeds the offline screen with local storage health and a bounded view of the records waiting
  * on the outbox. All reads are scoped to the signed-in owner.
@@ -51,6 +64,7 @@ class OfflineViewModel(
     totalCount: (String) -> Flow<Int>,
     lastSyncedAtMillis: (String) -> Flow<Long?>,
     recentRecords: (String, Int) -> Flow<List<StoredRecordSummary>>,
+    recordById: (String) -> Flow<MetricRecord?>,
     syncStatus: StateFlow<SyncStatus>,
     storageStats: Flow<StorageStats>,
     internetAvailable: Flow<Boolean>,
@@ -128,6 +142,28 @@ class OfflineViewModel(
             initialValue = OfflineUiState(),
         )
 
+    private val selectedRecordId = MutableStateFlow<String?>(null)
+
+    val selectedRecordState: StateFlow<RecordDetailsUiState> =
+        selectedRecordId.flatMapLatest { id ->
+            if (id == null) {
+                flowOf<RecordDetailsUiState>(RecordDetailsUiState.Idle)
+            } else {
+                recordById(id)
+                    .map<MetricRecord?, RecordDetailsUiState> { RecordDetailsUiState.Loaded(it) }
+                    .onStart { emit(RecordDetailsUiState.Loading) }
+            }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+            initialValue = RecordDetailsUiState.Idle,
+        )
+
+    /** Opens a stored record in the details screen; `null` closes it. */
+    fun selectRecord(recordId: String?) {
+        selectedRecordId.value = recordId
+    }
+
     private data class CountState(
         val pendingCount: Int = 0,
         val rejectedCount: Int = 0,
@@ -168,6 +204,7 @@ class OfflineViewModel(
                         recentRecords = { owner, limit ->
                             container.metricsRepository.observeRecentRecords(owner, limit)
                         },
+                        recordById = { recordId -> container.metricsRepository.observeRecord(recordId) },
                         syncStatus = container.telemetrySyncEngine.status,
                         storageStats = container.storageStatsProvider.observe(),
                         internetAvailable = container.connectivityObserver.isAvailable,

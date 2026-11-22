@@ -8,16 +8,11 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.app.drivedata.DriveDataApplication
 import com.app.drivedata.metrics.ObdMetricsCollector
 import com.app.drivedata.obd.model.ObdConnectionState
-import com.app.drivedata.sync.SyncError
-import com.app.drivedata.sync.SyncStatus
 import com.app.drivedata.vehicle.model.Vehicle
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -26,10 +21,6 @@ data class ProfileUiState(
     val displayName: String = "",
     val email: String? = null,
     val vehicleCount: Int = 0,
-    val pendingCount: Int = 0,
-    val rejectedCount: Int = 0,
-    val lastSyncedAtMillis: Long? = null,
-    val syncError: SyncError? = null,
     val adapterConnected: Boolean = false,
     val internetAvailable: Boolean = false,
     val collectionIntervalSeconds: Long = DEFAULT_COLLECTION_INTERVAL_SECONDS,
@@ -44,16 +35,11 @@ data class ProfileUiState(
  * Supplies the profile tab with the signed-in identity, garage size and live adapter/internet
  * status. The backend only stores a username, so the display name and e-mail are derived from it.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class ProfileViewModel(
     signedInUser: StateFlow<String?>,
     vehicles: Flow<List<Vehicle>>,
     connectionState: StateFlow<ObdConnectionState>,
-    pendingCount: Flow<Int>,
-    rejectedCount: Flow<Int>,
-    lastSyncedAtMillis: Flow<Long?>,
     internetAvailable: Flow<Boolean>,
-    syncStatus: StateFlow<SyncStatus>,
     private val collectionIntervalSeconds: Long = ProfileUiState.DEFAULT_COLLECTION_INTERVAL_SECONDS,
 ) : ViewModel() {
 
@@ -67,16 +53,6 @@ class ProfileViewModel(
             )
         }
 
-    private val sync: Flow<ProfileSync> =
-        combine(
-            pendingCount,
-            rejectedCount,
-            lastSyncedAtMillis,
-            syncStatus,
-        ) { pending, rejected, lastSync, status ->
-            ProfileSync(pending, rejected, lastSync, status.lastError)
-        }
-
     private val connectivity: Flow<ProfileConnectivity> =
         combine(connectionState, internetAvailable) { connection, internet ->
             ProfileConnectivity(
@@ -86,16 +62,12 @@ class ProfileViewModel(
         }
 
     val uiState: StateFlow<ProfileUiState> =
-        combine(identity, vehicles, sync, connectivity) { id, allVehicles, syncInfo, connectionInfo ->
+        combine(identity, vehicles, connectivity) { id, allVehicles, connectionInfo ->
             ProfileUiState(
                 username = id.username,
                 displayName = id.displayName,
                 email = id.email,
                 vehicleCount = allVehicles.size,
-                pendingCount = syncInfo.pendingCount,
-                rejectedCount = syncInfo.rejectedCount,
-                lastSyncedAtMillis = syncInfo.lastSyncedAtMillis,
-                syncError = syncInfo.syncError,
                 adapterConnected = connectionInfo.adapterConnected,
                 internetAvailable = connectionInfo.internetAvailable,
                 collectionIntervalSeconds = collectionIntervalSeconds,
@@ -112,13 +84,6 @@ class ProfileViewModel(
         val email: String?,
     )
 
-    private data class ProfileSync(
-        val pendingCount: Int,
-        val rejectedCount: Int,
-        val lastSyncedAtMillis: Long?,
-        val syncError: SyncError?,
-    )
-
     private data class ProfileConnectivity(
         val adapterConnected: Boolean,
         val internetAvailable: Boolean,
@@ -127,42 +92,15 @@ class ProfileViewModel(
     companion object {
         private const val STOP_TIMEOUT_MS = 5_000L
 
-        @OptIn(ExperimentalCoroutinesApi::class)
         fun factory(application: DriveDataApplication): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
                     val container = application.container
-                    val owner = container.authSession.signedInUser
                     ProfileViewModel(
-                        signedInUser = owner,
+                        signedInUser = container.authSession.signedInUser,
                         vehicles = container.vehicleRepository.observeVehicles(),
                         connectionState = container.obdConnectionManager.state,
-                        pendingCount =
-                            owner.flatMapLatest { user ->
-                                if (user == null) {
-                                    flowOf(0)
-                                } else {
-                                    container.metricsRepository.observePendingCount(user)
-                                }
-                            },
-                        rejectedCount =
-                            owner.flatMapLatest { user ->
-                                if (user == null) {
-                                    flowOf(0)
-                                } else {
-                                    container.metricsRepository.observeRejectedCount(user)
-                                }
-                            },
-                        lastSyncedAtMillis =
-                            owner.flatMapLatest { user ->
-                                if (user == null) {
-                                    flowOf(null)
-                                } else {
-                                    container.metricsRepository.observeLastUploadedAtMillis(user)
-                                }
-                            },
                         internetAvailable = container.connectivityObserver.isAvailable,
-                        syncStatus = container.telemetrySyncEngine.status,
                     )
                 }
             }

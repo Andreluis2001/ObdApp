@@ -125,11 +125,17 @@
     <string name="offline_record_uploaded_at">Sincronizado em %1$s</string>
     <string name="offline_record_waiting">Aguardando sincronização</string>
     <string name="offline_record_rejected_reason">Motivo: %1$s</string>
+    <string name="offline_record_view_details">Ver parâmetros</string>
+    <string name="offline_details_title">Detalhes da coleta</string>
+    <string name="offline_details_subtitle">Parâmetros registrados</string>
+    <string name="offline_details_parameters">Parâmetros</string>
+    <string name="offline_details_not_found">Registro não encontrado</string>
+    <string name="offline_details_not_found_message">Este registro não está mais disponível no armazenamento local.</string>
+    <string name="offline_details_range">Faixa: %1$s \u2013 %2$s %3$s</string>
+    <string name="offline_details_attempts">Tentativas de envio: %1$d</string>
 
     <string name="profile_title">Perfil</string>
     <string name="profile_settings">Configurações</string>
-    <string name="profile_notifications">Notificações</string>
-    <string name="profile_notifications_subtitle">Sincronização e alertas do aplicativo</string>
     <string name="profile_collection_settings">Configurações de coleta</string>
     <string name="profile_collection_interval">Intervalo: %1$d s</string>
     <string name="profile_connection">Conexão</string>
@@ -143,11 +149,6 @@
         <item quantity="one">%1$d veículo</item>
         <item quantity="other">%1$d veículos</item>
     </plurals>
-    <string name="profile_notifications_dialog_title">Notificações</string>
-    <string name="profile_notifications_pending">%1$d registro(s) aguardando sincronização.</string>
-    <string name="profile_notifications_rejected">%1$d registro(s) rejeitado(s) pelo servidor.</string>
-    <string name="profile_notifications_last_sync">Última sincronização: %1$s</string>
-    <string name="profile_notifications_empty">Nenhuma notificação no momento.</string>
     <string name="profile_collection_dialog_title">Configurações de coleta</string>
     <string name="profile_collection_dialog_message">A coleta é contínua e consulta o veículo a cada %1$d segundo enquanto o adaptador está conectado.</string>
     <string name="profile_about_dialog_title">Sobre o aplicativo</string>

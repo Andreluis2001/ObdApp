@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -124,6 +125,23 @@ class MetricRecordDaoTest {
                 3_000L,
                 dao.observeLatestUploadedAtMillis("admin", UploadStatus.UPLOADED).first(),
             )
+        }
+
+    @Test
+    fun observeWithReadingsById_returnsTheRecordAndItsReadings() =
+        runBlocking {
+            insertRecord("record-1", collectedAtMillis = 1_000L)
+
+            val result = dao.observeWithReadingsById("record-1").first()
+
+            assertEquals("record-1", result?.record?.id)
+            assertEquals(listOf(MetricId.RPM.name), result?.readings?.map { it.metricId })
+        }
+
+    @Test
+    fun observeWithReadingsById_returnsNullForAnUnknownRecord() =
+        runBlocking {
+            assertNull(dao.observeWithReadingsById("missing").first())
         }
 
     @Test

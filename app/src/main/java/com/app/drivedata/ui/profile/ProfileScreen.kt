@@ -24,7 +24,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Wifi
@@ -55,8 +54,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.drivedata.BuildConfig
 import com.app.drivedata.R
 import com.app.drivedata.ui.common.LightStatusBarIcons
-import com.app.drivedata.ui.common.syncErrorMessage
-import com.app.drivedata.ui.common.formatDateTime
 import com.app.drivedata.ui.theme.HomeBackground
 import com.app.drivedata.ui.theme.HomeRed
 import com.app.drivedata.ui.theme.HomeSurface
@@ -64,7 +61,7 @@ import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
 import com.app.drivedata.ui.theme.LoginBackgroundTop
 
-private enum class ProfileDialog { NOTIFICATIONS, COLLECTION, ABOUT }
+private enum class ProfileDialog { COLLECTION, ABOUT }
 
 @Composable
 fun ProfileScreen(
@@ -122,13 +119,6 @@ private fun ProfileContent(
                 onClick = onOpenVehicles,
             )
             ProfileMenuRow(
-                icon = Icons.Outlined.Notifications,
-                title = stringResource(R.string.profile_notifications),
-                subtitle = stringResource(R.string.profile_notifications_subtitle),
-                badge = badgeText(state.pendingCount),
-                onClick = { activeDialog = ProfileDialog.NOTIFICATIONS },
-            )
-            ProfileMenuRow(
                 icon = Icons.Outlined.Schedule,
                 title = stringResource(R.string.profile_collection_settings),
                 subtitle = stringResource(
@@ -173,9 +163,6 @@ private fun ProfileContent(
     }
 
     when (activeDialog) {
-        ProfileDialog.NOTIFICATIONS ->
-            NotificationsDialog(state = state, onDismiss = { activeDialog = null })
-
         ProfileDialog.COLLECTION ->
             CollectionDialog(
                 intervalSeconds = state.collectionIntervalSeconds,
@@ -267,7 +254,6 @@ private fun ProfileMenuRow(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
-    badge: String? = null,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -304,22 +290,6 @@ private fun ProfileMenuRow(
                     color = HomeTextSecondary,
                 )
             }
-            if (badge != null) {
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .background(HomeRed, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = badge,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
-                    )
-                }
-                Spacer(Modifier.width(10.dp))
-            }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
@@ -340,76 +310,6 @@ private fun connectionSubtitle(state: ProfileUiState): String =
             else -> R.string.profile_connection_offline
         },
     )
-
-private fun badgeText(pendingCount: Int): String? =
-    when {
-        pendingCount <= 0 -> null
-        pendingCount > 9 -> "9+"
-        else -> pendingCount.toString()
-    }
-
-@Composable
-private fun NotificationsDialog(
-    state: ProfileUiState,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = HomeSurface,
-        titleContentColor = HomeTextPrimary,
-        textContentColor = HomeTextSecondary,
-        title = { Text(stringResource(R.string.profile_notifications_dialog_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (state.pendingCount > 0) {
-                    Text(
-                        text = stringResource(
-                            R.string.profile_notifications_pending,
-                            state.pendingCount,
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                if (state.rejectedCount > 0) {
-                    Text(
-                        text = stringResource(
-                            R.string.profile_notifications_rejected,
-                            state.rejectedCount,
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                state.syncError?.let { error ->
-                    Text(
-                        text = error.syncErrorMessage(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = HomeRed,
-                    )
-                }
-                state.lastSyncedAtMillis?.let { millis ->
-                    Text(
-                        text = stringResource(
-                            R.string.profile_notifications_last_sync,
-                            formatDateTime(millis),
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if (state.pendingCount == 0 && state.rejectedCount == 0 && state.syncError == null) {
-                    Text(
-                        text = stringResource(R.string.profile_notifications_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_close))
-            }
-        },
-    )
-}
 
 @Composable
 private fun CollectionDialog(
