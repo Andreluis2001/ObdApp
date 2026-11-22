@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -106,11 +107,27 @@ class ProfileViewModelTest {
     @Test
     fun exposesConfiguredCollectionInterval() =
         runTest {
-            val viewModel = profileViewModel(collectionIntervalSeconds = 60L)
+            val viewModel = profileViewModel(collectionInterval = flowOf(60L))
 
             val state = viewModel.awaitState { it.collectionIntervalSeconds == 60L }
 
             assertEquals(60L, state.collectionIntervalSeconds)
+        }
+
+    @Test
+    fun savesAndClampsCollectionInterval() =
+        runTest {
+            val saved = mutableListOf<Long>()
+            val viewModel = profileViewModel(saveCollectionInterval = { saved += it })
+
+            viewModel.setCollectionIntervalSeconds(10L)
+            advanceUntilIdle()
+            viewModel.setCollectionIntervalSeconds(120L)
+            advanceUntilIdle()
+            viewModel.setCollectionIntervalSeconds(0L)
+            advanceUntilIdle()
+
+            assertEquals(listOf(10L, 60L, 1L), saved)
         }
 
     @Test
@@ -134,14 +151,16 @@ class ProfileViewModelTest {
         connection: MutableStateFlow<ObdConnectionState> =
             MutableStateFlow(ObdConnectionState.Disconnected),
         internetAvailable: Flow<Boolean> = flowOf(false),
-        collectionIntervalSeconds: Long = 1L,
+        collectionInterval: Flow<Long> = flowOf(1L),
+        saveCollectionInterval: suspend (Long) -> Unit = { },
     ): ProfileViewModel =
         ProfileViewModel(
             signedInUser = username,
             vehicles = vehicles,
             connectionState = connection,
             internetAvailable = internetAvailable,
-            collectionIntervalSeconds = collectionIntervalSeconds,
+            collectionInterval = collectionInterval,
+            saveCollectionInterval = saveCollectionInterval,
         )
 
     private suspend fun ProfileViewModel.awaitState(predicate: (ProfileUiState) -> Boolean): ProfileUiState =

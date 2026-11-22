@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.app.drivedata.metrics.CollectionInterval
 import com.app.drivedata.obd.model.ObdWifiConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -17,7 +18,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class AppSettingsRepository(context: Context) {
 
     private val dataStore = context.applicationContext.dataStore
- 
+
     val wifiConfig: Flow<ObdWifiConfig> =
         dataStore.data.map { preferences ->
             ObdWifiConfig(
@@ -35,10 +36,29 @@ class AppSettingsRepository(context: Context) {
         }
     }
 
+    val collectionIntervalSeconds: Flow<Long> =
+        dataStore.data.map { preferences ->
+            val seconds =
+                preferences[KEY_COLLECTION_INTERVAL_SECONDS]
+                    ?: CollectionInterval.DEFAULT_SECONDS.toInt()
+            seconds
+                .toLong()
+                .coerceIn(CollectionInterval.MIN_SECONDS, CollectionInterval.MAX_SECONDS)
+        }
+
+    suspend fun saveCollectionIntervalSeconds(seconds: Long) {
+        val safe =
+            seconds.coerceIn(CollectionInterval.MIN_SECONDS, CollectionInterval.MAX_SECONDS)
+        dataStore.edit { preferences ->
+            preferences[KEY_COLLECTION_INTERVAL_SECONDS] = safe.toInt()
+        }
+    }
+
     private companion object {
         const val DEFAULT_HOST = "192.168.0.10"
         const val DEFAULT_PORT = 35000
         val KEY_HOST = stringPreferencesKey("wifi_host")
         val KEY_PORT = intPreferencesKey("wifi_port")
+        val KEY_COLLECTION_INTERVAL_SECONDS = intPreferencesKey("collection_interval_seconds")
     }
 }

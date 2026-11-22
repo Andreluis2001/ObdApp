@@ -35,6 +35,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,10 +53,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlin.math.roundToInt
 import com.app.drivedata.BuildConfig
 import com.app.drivedata.R
+import com.app.drivedata.metrics.CollectionInterval
 import com.app.drivedata.ui.common.LightStatusBarIcons
 import com.app.drivedata.ui.theme.HomeBackground
+import com.app.drivedata.ui.theme.HomeBlue
 import com.app.drivedata.ui.theme.HomeRed
 import com.app.drivedata.ui.theme.HomeSurface
 import com.app.drivedata.ui.theme.HomeTextPrimary
@@ -77,6 +82,7 @@ fun ProfileScreen(
         state = state,
         onOpenVehicles = onOpenVehicles,
         onOpenConnection = onOpenConnection,
+        onCollectionIntervalSelected = viewModel::setCollectionIntervalSeconds,
         onSignOut = onSignOut,
         modifier = modifier,
     )
@@ -87,6 +93,7 @@ private fun ProfileContent(
     state: ProfileUiState,
     onOpenVehicles: () -> Unit,
     onOpenConnection: () -> Unit,
+    onCollectionIntervalSelected: (Long) -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -166,6 +173,7 @@ private fun ProfileContent(
         ProfileDialog.COLLECTION ->
             CollectionDialog(
                 intervalSeconds = state.collectionIntervalSeconds,
+                onSave = onCollectionIntervalSelected,
                 onDismiss = { activeDialog = null },
             )
 
@@ -314,8 +322,11 @@ private fun connectionSubtitle(state: ProfileUiState): String =
 @Composable
 private fun CollectionDialog(
     intervalSeconds: Long,
+    onSave: (Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var selected by rememberSaveable(intervalSeconds) { mutableStateOf(intervalSeconds) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = HomeSurface,
@@ -323,14 +334,75 @@ private fun CollectionDialog(
         textContentColor = HomeTextSecondary,
         title = { Text(stringResource(R.string.profile_collection_dialog_title)) },
         text = {
-            Text(
-                text = stringResource(R.string.profile_collection_dialog_message, intervalSeconds),
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text =
+                        pluralStringResource(
+                            R.plurals.profile_collection_dialog_message,
+                            selected.toInt(),
+                            selected,
+                        ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = stringResource(R.string.profile_collection_interval_value, selected),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = HomeTextPrimary,
+                )
+                Slider(
+                    value = selected.toFloat(),
+                    onValueChange = { selected = it.roundToInt().toLong() },
+                    valueRange =
+                        CollectionInterval.MIN_SECONDS.toFloat()..
+                            CollectionInterval.MAX_SECONDS.toFloat(),
+                    steps =
+                        (CollectionInterval.MAX_SECONDS - CollectionInterval.MIN_SECONDS)
+                            .toInt() - 1,
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = HomeBlue,
+                            activeTrackColor = HomeBlue,
+                        ),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.profile_collection_interval_min,
+                                CollectionInterval.MIN_SECONDS,
+                            ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = HomeTextSecondary,
+                    )
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.profile_collection_interval_max,
+                                CollectionInterval.MAX_SECONDS,
+                            ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = HomeTextSecondary,
+                    )
+                }
+            }
         },
         confirmButton = {
+            TextButton(
+                onClick = {
+                    onSave(selected)
+                    onDismiss()
+                },
+            ) {
+                Text(stringResource(R.string.action_save))
+            }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_close))
+                Text(stringResource(R.string.action_cancel))
             }
         },
     )

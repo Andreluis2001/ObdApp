@@ -15,6 +15,7 @@
     <string name="action_back">Voltar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_close">Fechar</string>
+    <string name="action_save">Salvar</string>
     <string name="action_understood">Entendi</string>
 
     <string name="connection_title">Conexão</string>
@@ -138,6 +139,9 @@
     <string name="profile_settings">Configurações</string>
     <string name="profile_collection_settings">Configurações de coleta</string>
     <string name="profile_collection_interval">Intervalo: %1$d s</string>
+    <string name="profile_collection_interval_value">A cada %1$d s</string>
+    <string name="profile_collection_interval_min">Mín. %1$d s</string>
+    <string name="profile_collection_interval_max">Máx. %1$d s</string>
     <string name="profile_connection">Conexão</string>
     <string name="profile_connection_online">ELM327 conectado · Internet disponível</string>
     <string name="profile_connection_adapter_only">ELM327 conectado · Internet indisponível</string>
@@ -150,7 +154,10 @@
         <item quantity="other">%1$d veículos</item>
     </plurals>
     <string name="profile_collection_dialog_title">Configurações de coleta</string>
-    <string name="profile_collection_dialog_message">A coleta é contínua e consulta o veículo a cada %1$d segundo enquanto o adaptador está conectado.</string>
+    <plurals name="profile_collection_dialog_message">
+        <item quantity="one">A coleta é contínua e consulta o veículo a cada %1$d segundo enquanto o adaptador está conectado.</item>
+        <item quantity="other">A coleta é contínua e consulta o veículo a cada %1$d segundos enquanto o adaptador está conectado.</item>
+    </plurals>
     <string name="profile_about_dialog_title">Sobre o aplicativo</string>
     <string name="profile_about_dialog_message">Drive Data — telemetria veicular com ELM327. Versão %1$s.</string>
 
