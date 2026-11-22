@@ -73,6 +73,9 @@ internal fun ConnectionStatus.color(): Color =
         ConnectionStatus.ERROR -> HomeRed
     }
 
+/** The connected state is redundant on cards and details; warning states remain visible. */
+internal fun ConnectionStatus.shouldShowStatus(): Boolean = this != ConnectionStatus.CONNECTED
+
 @Composable
 internal fun lastCommunicationText(millis: Long?): String =
     when {

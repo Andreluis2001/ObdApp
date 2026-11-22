@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -25,14 +24,12 @@ import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
@@ -58,13 +55,13 @@ import com.app.drivedata.BuildConfig
 import com.app.drivedata.R
 import com.app.drivedata.metrics.CollectionInterval
 import com.app.drivedata.ui.common.LightStatusBarIcons
+import com.app.drivedata.ui.common.ScreenHeader
 import com.app.drivedata.ui.theme.HomeBackground
 import com.app.drivedata.ui.theme.HomeBlue
 import com.app.drivedata.ui.theme.HomeRed
 import com.app.drivedata.ui.theme.HomeSurface
 import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
-import com.app.drivedata.ui.theme.LoginBackgroundTop
 
 private enum class ProfileDialog { COLLECTION, ABOUT }
 
@@ -104,7 +101,7 @@ private fun ProfileContent(
             .fillMaxSize()
             .background(HomeBackground),
     ) {
-        ProfileHeader(onOpenSettings = { activeDialog = ProfileDialog.COLLECTION })
+        ScreenHeader(title = stringResource(R.string.profile_title))
 
         Column(
             modifier = Modifier
@@ -179,34 +176,6 @@ private fun ProfileContent(
 
         ProfileDialog.ABOUT -> AboutDialog(onDismiss = { activeDialog = null })
         null -> Unit
-    }
-}
-
-@Composable
-private fun ProfileHeader(onOpenSettings: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(LoginBackgroundTop)
-            .statusBarsPadding()
-            .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 16.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringResource(R.string.profile_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(onClick = onOpenSettings) {
-                Icon(
-                    imageVector = Icons.Outlined.Settings,
-                    contentDescription = stringResource(R.string.profile_settings),
-                    tint = Color.White,
-                )
-            }
-        }
     }
 }
 

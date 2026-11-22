@@ -4,7 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,17 +14,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,11 +40,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.drivedata.R
 import com.app.drivedata.metrics.MetricDefinition
 import com.app.drivedata.metrics.defaultMetricCatalog
+import com.app.drivedata.ui.common.AppCard
 import com.app.drivedata.ui.common.InfoRow
 import com.app.drivedata.ui.common.LightStatusBarIcons
 import com.app.drivedata.ui.common.PrimaryButton
@@ -54,11 +54,14 @@ import com.app.drivedata.ui.common.RowDivider
 import com.app.drivedata.ui.common.ScreenHeader
 import com.app.drivedata.ui.common.SectionHeader
 import com.app.drivedata.ui.common.SecondaryButton
-import com.app.drivedata.ui.common.StatusLabel
-import com.app.drivedata.ui.common.TintedIconBadge
+import com.app.drivedata.ui.common.StatusInfoRow
 import com.app.drivedata.ui.common.formatDateTime
 import com.app.drivedata.ui.discovery.messageRes
 import com.app.drivedata.ui.metrics.presentation
+import com.app.drivedata.ui.preview.previewVehicle
+import com.app.drivedata.ui.preview.previewVehicleDetailsState
+import com.app.drivedata.ui.theme.Dimens
+import com.app.drivedata.ui.theme.DriveDataTheme
 import com.app.drivedata.ui.theme.HomeBackground
 import com.app.drivedata.ui.theme.HomeBlue
 import com.app.drivedata.ui.theme.HomeRed
@@ -71,7 +74,7 @@ import com.app.drivedata.ui.vehicles.components.VehicleErrorBanner
 import com.app.drivedata.ui.vehicles.components.color
 import com.app.drivedata.ui.vehicles.components.label
 import com.app.drivedata.ui.vehicles.components.lastCommunicationText
-import com.app.drivedata.vehicle.model.SupportedPid
+import com.app.drivedata.ui.vehicles.components.shouldShowStatus
 import com.app.drivedata.vehicle.model.Vehicle
 
 @Composable
@@ -92,89 +95,22 @@ fun VehicleDetailsScreen(
 
     LightStatusBarIcons()
 
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(HomeBackground),
-    ) {
-        ScreenHeader(
-            title = vehicle?.displayName ?: stringResource(R.string.vehicle_details_title),
-            subtitle = stringResource(R.string.vehicle_details_subtitle),
-            onBack = onBack,
-        )
-
-        when {
-            state.isLoading ->
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(color = HomeBlue)
-                }
-
-            vehicle == null ->
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource(R.string.vehicle_details_not_found),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = HomeTextSecondary,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-
-            else ->
-                Column(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                            .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    state.error?.let { error ->
-                        VehicleErrorBanner(
-                            message = error.message(),
-                            onDismiss = viewModel::dismissError,
-                        )
-                    }
-
-                    if (state.isBusy) {
-                        BusyCard(operation = state.operation)
-                    }
-
-                    VehicleInfoCard(
-                        vehicle = vehicle,
-                        enabled = !state.isBusy,
-                        onSelectActive = viewModel::setActive,
-                        onRemove = { confirmRemoval = true },
-                    )
-
-                    SectionHeader(title = stringResource(R.string.vehicle_details_adapter))
-                    AdapterCard(vehicle = vehicle)
-
-                    SectionHeader(title = stringResource(R.string.vehicle_details_capabilities))
-                    CapabilitiesCard(
-                        vehicle = vehicle,
-                        catalog = catalog,
-                        enabled = !state.isBusy,
-                        onPidToggle = viewModel::setPidEnabled,
-                        onRediscover = viewModel::rediscover,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-        }
-    }
+    VehicleDetailsContent(
+        state = state,
+        catalog = catalog,
+        onBack = onBack,
+        onSelectActive = viewModel::setActive,
+        onRemove = { confirmRemoval = true },
+        onPidToggle = viewModel::setPidEnabled,
+        onRediscover = viewModel::rediscover,
+        onDismissError = viewModel::dismissError,
+        modifier = modifier,
+    )
 
     if (confirmRemoval && vehicle != null) {
         AlertDialog(
             onDismissRequest = { confirmRemoval = false },
+            shape = RoundedCornerShape(Dimens.CardCorner),
             containerColor = HomeSurface,
             titleContentColor = HomeTextPrimary,
             textContentColor = HomeTextSecondary,
@@ -205,19 +141,111 @@ fun VehicleDetailsScreen(
 }
 
 @Composable
+private fun VehicleDetailsContent(
+    state: VehicleDetailsUiState,
+    catalog: List<MetricDefinition>,
+    onBack: () -> Unit,
+    onSelectActive: () -> Unit,
+    onRemove: () -> Unit,
+    onPidToggle: (Int, Boolean) -> Unit,
+    onRediscover: () -> Unit,
+    onDismissError: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val vehicle = state.vehicle
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(HomeBackground),
+    ) {
+        ScreenHeader(
+            title = vehicle?.displayName ?: stringResource(R.string.vehicle_details_title),
+            subtitle = stringResource(R.string.vehicle_details_subtitle),
+            onBack = onBack,
+        )
+
+        when {
+            state.isLoading ->
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(color = HomeBlue)
+                }
+
+            vehicle == null ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AppCard(contentPadding = PaddingValues(24.dp)) {
+                        Text(
+                            text = stringResource(R.string.vehicle_details_not_found),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = HomeTextSecondary,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+
+            else ->
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(Dimens.ScreenPadding),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.CardSpacing),
+                ) {
+                    state.error?.let { error ->
+                        VehicleErrorBanner(
+                            message = error.message(),
+                            onDismiss = onDismissError,
+                        )
+                    }
+
+                    if (state.isBusy) {
+                        BusyCard(operation = state.operation)
+                    }
+
+                    VehicleInfoCard(
+                        vehicle = vehicle,
+                        enabled = !state.isBusy,
+                        onSelectActive = onSelectActive,
+                        onRemove = onRemove,
+                    )
+
+                    SectionHeader(title = stringResource(R.string.vehicle_details_adapter))
+                    AdapterCard(vehicle = vehicle)
+
+                    SectionHeader(title = stringResource(R.string.vehicle_details_capabilities))
+                    CapabilitiesCard(
+                        vehicle = vehicle,
+                        catalog = catalog,
+                        enabled = !state.isBusy,
+                        onPidToggle = onPidToggle,
+                        onRediscover = onRediscover,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+        }
+    }
+}
+
+@Composable
 private fun VehicleInfoCard(
     vehicle: Vehicle,
     enabled: Boolean,
     onSelectActive: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    SectionCard {
+    AppCard(verticalArrangement = Arrangement.spacedBy(Dimens.CardSpacing)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier =
-                    Modifier
-                        .size(56.dp)
-                        .background(HomeBlue.copy(alpha = 0.12f), RoundedCornerShape(16.dp)),
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(HomeBlue.copy(alpha = 0.12f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -235,18 +263,18 @@ private fun VehicleInfoCard(
                 Text(
                     text = vehicle.displayName,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Medium,
                     color = HomeTextPrimary,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text =
                         vehicle.identity?.vin
                             ?: "${vehicle.details.make} ${vehicle.details.model}".trim(),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelMedium,
                     color = HomeTextSecondary,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (vehicle.isActive) {
@@ -257,19 +285,18 @@ private fun VehicleInfoCard(
             IconButton(
                 onClick = onRemove,
                 enabled = enabled,
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(48.dp),
             ) {
                 Icon(
                     imageVector = Icons.Filled.DeleteOutline,
                     contentDescription = stringResource(R.string.vehicle_remove),
                     tint = HomeRed,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(22.dp),
                 )
             }
         }
 
         if (!vehicle.isActive) {
-            Spacer(Modifier.height(4.dp))
             PrimaryButton(
                 label = stringResource(R.string.vehicle_select_active),
                 onClick = onSelectActive,
@@ -287,7 +314,6 @@ private fun VehicleInfoCard(
             Text(
                 text = stringResource(R.string.vehicle_details_identity),
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
                 color = HomeTextPrimary,
             )
             InfoRow(label = stringResource(R.string.vehicle_vin_label), value = identity.vin)
@@ -306,19 +332,14 @@ private fun VehicleInfoCard(
 @Composable
 private fun AdapterCard(vehicle: Vehicle) {
     val connection = vehicle.connection
-    SectionCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TintedIconBadge(
-                icon = Icons.Filled.Wifi,
-                tint = connection.status.color(),
-            )
-            Spacer(Modifier.width(12.dp))
-            StatusLabel(
+    AppCard(verticalArrangement = Arrangement.spacedBy(Dimens.CardSpacing)) {
+        if (connection.status.shouldShowStatus()) {
+            StatusInfoRow(
+                label = stringResource(R.string.metrics_diag_status),
                 color = connection.status.color(),
-                label = connection.status.label(),
+                value = connection.status.label(),
             )
         }
-        RowDivider()
         InfoRow(
             label = stringResource(R.string.connection_address_label),
             value =
@@ -328,12 +349,10 @@ private fun AdapterCard(vehicle: Vehicle) {
                     stringResource(R.string.connection_address_unknown)
                 },
         )
-        Spacer(Modifier.height(10.dp))
         InfoRow(
             label = stringResource(R.string.vehicle_details_last_connection),
             value = lastCommunicationText(connection.lastConnectionAtMillis),
         )
-        Spacer(Modifier.height(10.dp))
         InfoRow(
             label = stringResource(R.string.vehicle_last_ecu),
             value = lastCommunicationText(connection.lastEcuCommunicationAtMillis),
@@ -356,27 +375,14 @@ private fun CapabilitiesCard(
         }
     val discoveredAt = vehicle.capabilities.lastDiscoveredAtMillis
 
-    SectionCard {
+    AppCard(verticalArrangement = Arrangement.spacedBy(Dimens.CardSpacing)) {
         if (discovered.isEmpty()) {
             Text(
                 text = stringResource(R.string.vehicle_details_no_capabilities),
                 style = MaterialTheme.typography.bodySmall,
                 color = HomeTextSecondary,
             )
-            if (discoveredAt != null) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text =
-                        stringResource(
-                            R.string.vehicle_discovered_at,
-                            formatDateTime(discoveredAt),
-                        ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = HomeTextSecondary,
-                )
-            }
         } else {
-            Spacer(Modifier.height(4.dp))
             discovered.forEachIndexed { index, (definition, supported) ->
                 if (index > 0) RowDivider(verticalPadding = 6.dp)
                 DiscoveredPidRow(
@@ -392,21 +398,29 @@ private fun CapabilitiesCard(
             }
         }
 
-        Spacer(Modifier.height(4.dp))
+        discoveredAt?.let {
+            Text(
+                text = stringResource(R.string.vehicle_discovered_at, formatDateTime(it)),
+                style = MaterialTheme.typography.labelSmall,
+                color = HomeTextSecondary,
+            )
+        }
+
         SecondaryButton(
             label = stringResource(R.string.vehicle_rediscover),
             onClick = onRediscover,
             enabled = enabled && vehicle.connection.isConfigured,
+            icon = Icons.Filled.Refresh,
         )
     }
 }
 
 @Composable
 private fun BusyCard(operation: DetailsOperation) {
-    SectionCard {
+    AppCard {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(Dimens.CardSpacing),
         ) {
             CircularProgressIndicator(
                 color = HomeBlue,
@@ -444,27 +458,6 @@ private fun BusyCard(operation: DetailsOperation) {
 }
 
 @Composable
-private fun SectionCard(
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = HomeSurface),
-        shape = RoundedCornerShape(20.dp),
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
 private fun DetailsError.message(): String =
     when (this) {
         DetailsError.NotConfigured -> stringResource(R.string.vehicle_details_not_configured)
@@ -478,3 +471,131 @@ private fun DetailsError.message(): String =
         DetailsError.DeleteFailed -> stringResource(R.string.vehicle_details_delete_failed)
         DetailsError.ActivateFailed -> stringResource(R.string.vehicle_details_activate_failed)
     }
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFFEEF3FA,
+    widthDp = 360,
+    heightDp = 800,
+    name = "Vehicle details - active",
+)
+@Composable
+private fun VehicleDetailsActivePreview() {
+    DriveDataTheme {
+        VehicleDetailsContent(
+            state = previewVehicleDetailsState(),
+            catalog = defaultMetricCatalog,
+            onBack = {},
+            onSelectActive = {},
+            onRemove = {},
+            onPidToggle = { _, _ -> },
+            onRediscover = {},
+            onDismissError = {},
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFFEEF3FA,
+    widthDp = 360,
+    heightDp = 800,
+    name = "Vehicle details - inactive, no adapter",
+)
+@Composable
+private fun VehicleDetailsInactivePreview() {
+    DriveDataTheme {
+        VehicleDetailsContent(
+            state =
+                previewVehicleDetailsState(
+                    vehicle =
+                        previewVehicle(
+                            isActive = false,
+                            configured = false,
+                            pids = emptyList(),
+                            discovered = false,
+                        ),
+                ),
+            catalog = defaultMetricCatalog,
+            onBack = {},
+            onSelectActive = {},
+            onRemove = {},
+            onPidToggle = { _, _ -> },
+            onRediscover = {},
+            onDismissError = {},
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFFEEF3FA,
+    widthDp = 360,
+    heightDp = 800,
+    name = "Vehicle details - busy",
+)
+@Composable
+private fun VehicleDetailsBusyPreview() {
+    DriveDataTheme {
+        VehicleDetailsContent(
+            state =
+                previewVehicleDetailsState(
+                    operation = DetailsOperation.Discovering(0x20, 12),
+                ),
+            catalog = defaultMetricCatalog,
+            onBack = {},
+            onSelectActive = {},
+            onRemove = {},
+            onPidToggle = { _, _ -> },
+            onRediscover = {},
+            onDismissError = {},
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFFEEF3FA,
+    widthDp = 320,
+    heightDp = 760,
+    fontScale = 1.3f,
+    name = "Vehicle details - small width, large text",
+)
+@Composable
+private fun VehicleDetailsLargeTextPreview() {
+    DriveDataTheme {
+        VehicleDetailsContent(
+            state = previewVehicleDetailsState(),
+            catalog = defaultMetricCatalog,
+            onBack = {},
+            onSelectActive = {},
+            onRemove = {},
+            onPidToggle = { _, _ -> },
+            onRediscover = {},
+            onDismissError = {},
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFFEEF3FA,
+    widthDp = 360,
+    heightDp = 400,
+    name = "Vehicle details - not found",
+)
+@Composable
+private fun VehicleDetailsNotFoundPreview() {
+    DriveDataTheme {
+        VehicleDetailsContent(
+            state = previewVehicleDetailsState(vehicle = null),
+            catalog = defaultMetricCatalog,
+            onBack = {},
+            onSelectActive = {},
+            onRemove = {},
+            onPidToggle = { _, _ -> },
+            onRediscover = {},
+            onDismissError = {},
+        )
+    }
+}

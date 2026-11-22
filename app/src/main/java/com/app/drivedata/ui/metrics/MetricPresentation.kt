@@ -2,9 +2,11 @@ package com.app.drivedata.ui.metrics
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Air
+import androidx.compose.material.icons.filled.AvTimer
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Compress
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.DonutLarge
 import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Thermostat
@@ -17,6 +19,7 @@ import com.app.drivedata.ui.theme.HomeBlue
 import com.app.drivedata.ui.theme.HomeGreen
 import com.app.drivedata.ui.theme.HomeOrange
 import com.app.drivedata.ui.theme.HomePurple
+import com.app.drivedata.ui.theme.MetricRpm
 
 internal data class MetricPresentation(
     val labelRes: Int,
@@ -44,8 +47,8 @@ internal fun MetricId.presentation(): MetricPresentation =
             MetricPresentation(
                 labelRes = R.string.metric_rpm,
                 unitRes = R.string.home_unit_rpm,
-                icon = Icons.Filled.Speed,
-                tint = HomeGreen,
+                icon = Icons.Filled.AvTimer,
+                tint = MetricRpm,
                 range = 0.0..7_000.0,
             )
 
@@ -53,7 +56,7 @@ internal fun MetricId.presentation(): MetricPresentation =
             MetricPresentation(
                 labelRes = R.string.metric_speed,
                 unitRes = R.string.home_unit_speed,
-                icon = Icons.Filled.DirectionsCar,
+                icon = Icons.Filled.Speed,
                 tint = HomeBlue,
                 range = 0.0..180.0,
             )
@@ -71,7 +74,7 @@ internal fun MetricId.presentation(): MetricPresentation =
             MetricPresentation(
                 labelRes = R.string.metric_engine_load,
                 unitRes = R.string.home_unit_percent,
-                icon = Icons.Filled.Bolt,
+                icon = Icons.Filled.DonutLarge,
                 tint = HomePurple,
                 range = 0.0..100.0,
             )

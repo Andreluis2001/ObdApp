@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,10 +18,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,10 +43,37 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.app.drivedata.R
+import com.app.drivedata.ui.theme.Dimens
 import com.app.drivedata.ui.theme.HomeBlue
 import com.app.drivedata.ui.theme.HomeDivider
+import com.app.drivedata.ui.theme.HomeSurface
 import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
+
+/** Standard white card: one radius, soft shadow, one padding value. */
+@Composable
+fun AppCard(
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(Dimens.CardPadding),
+    border: BorderStroke? = null,
+    elevation: Dp = 2.dp,
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(Dimens.CardCorner),
+        colors = CardDefaults.cardColors(containerColor = HomeSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+        border = border,
+    ) {
+        Column(
+            modifier = Modifier.padding(contentPadding),
+            verticalArrangement = verticalArrangement,
+            content = content,
+        )
+    }
+}
 
 /** Section title rendered outside the cards, as in the dashboard mockup. */
 @Composable
@@ -53,13 +84,12 @@ fun SectionHeader(
     Text(
         text = title,
         style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
         color = HomeTextPrimary,
         modifier = modifier,
     )
 }
 
-/** Small colored dot followed by a bold status label, used for connection states. */
+/** Small colored dot followed by a readable status label. */
 @Composable
 fun StatusLabel(
     color: Color,
@@ -72,17 +102,40 @@ fun StatusLabel(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(color, CircleShape),
+            modifier =
+                Modifier
+                    .size(8.dp)
+                    .background(color, CircleShape),
         )
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            color = color,
-            maxLines = 1,
+            color = HomeTextPrimary,
+            maxLines = 2,
         )
+    }
+}
+
+/** A label/value row whose value is a status dot plus text. */
+@Composable
+fun StatusInfoRow(
+    label: String,
+    color: Color,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = HomeTextSecondary,
+            modifier = Modifier.weight(1f),
+        )
+        StatusLabel(color = color, label = value)
     }
 }
 
@@ -99,7 +152,7 @@ fun TintedIconBadge(
     Box(
         modifier = modifier
             .size(badgeSize)
-            .background(tint.copy(alpha = 0.14f), CircleShape),
+            .background(tint.copy(alpha = 0.12f), CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -125,13 +178,13 @@ fun InfoRow(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelMedium,
             color = HomeTextSecondary,
             modifier = Modifier.weight(1f),
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = valueColor,
             textAlign = TextAlign.End,
@@ -153,7 +206,7 @@ fun PrimaryButton(
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dimens.InnerCorner),
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = HomeBlue,
@@ -164,7 +217,7 @@ fun PrimaryButton(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
         )
     }
@@ -177,6 +230,8 @@ fun SecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    icon: ImageVector? = null,
+    iconContentDescription: String? = null,
 ) {
     OutlinedButton(
         onClick = onClick,
@@ -184,7 +239,7 @@ fun SecondaryButton(
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Dimens.InnerCorner),
         border = BorderStroke(1.dp, HomeDivider),
         colors =
             ButtonDefaults.outlinedButtonColors(
@@ -192,17 +247,25 @@ fun SecondaryButton(
                 disabledContentColor = HomeTextSecondary,
             ),
     ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = iconContentDescription,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+        }
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
         )
     }
 }
 
 /**
- * Lightweight line chart with a gradient fill, matching the dashboard mockup.
- * Rendered as a flat line when fewer than two points are available.
+ * Lightweight line chart with a gradient fill. Empty history draws nothing, so unavailable
+ * readings never imply a value.
  */
 @Composable
 fun MetricSparkline(
@@ -211,7 +274,7 @@ fun MetricSparkline(
     modifier: Modifier = Modifier,
 ) {
     Canvas(modifier = modifier) {
-        if (size.width <= 0f || size.height <= 0f) return@Canvas
+        if (points.isEmpty() || size.width <= 0f || size.height <= 0f) return@Canvas
 
         if (points.size < 2) {
             drawLine(
