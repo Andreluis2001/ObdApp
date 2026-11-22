@@ -1,4 +1,4 @@
-package com.app.drivedata.ui.vehicles.components
+package com.app.drivedata.ui.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -24,11 +24,12 @@ import com.app.drivedata.R
 import com.app.drivedata.ui.theme.LoginBackgroundTop
 import com.app.drivedata.ui.theme.LoginTextMuted
 
+/** Dark navy header shared by the tab sub-screens. */
 @Composable
-fun VehicleHeader(
+fun ScreenHeader(
     title: String,
-    subtitle: String? = null,
     onBack: () -> Unit,
+    subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Column(

@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.drivedata.R
 import com.app.drivedata.ui.common.LightStatusBarIcons
+import com.app.drivedata.ui.common.ScreenHeader
 import com.app.drivedata.ui.theme.HomeBackground
 import com.app.drivedata.ui.theme.HomeBlue
 import com.app.drivedata.ui.theme.HomeSurface
@@ -40,7 +41,6 @@ import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
 import com.app.drivedata.ui.vehicles.components.VehicleCard
 import com.app.drivedata.ui.vehicles.components.VehicleErrorBanner
-import com.app.drivedata.ui.vehicles.components.VehicleHeader
 
 @Composable
 fun VehicleListScreen(
@@ -59,7 +59,7 @@ fun VehicleListScreen(
                 .fillMaxSize()
                 .background(HomeBackground),
     ) {
-        VehicleHeader(
+        ScreenHeader(
             title = stringResource(R.string.vehicles_title),
             subtitle = stringResource(R.string.vehicles_subtitle),
             onBack = onBack,

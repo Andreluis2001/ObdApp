@@ -26,7 +26,7 @@ class VinMismatchException(
 
 class ObdMetricsCollector(
     private val connectionManager: ObdConnectionManager,
-    private val pollIntervalMs: Long = DEFAULT_POLL_INTERVAL_MS,
+    private val pollIntervalMs: () -> Long = { DEFAULT_POLL_INTERVAL_MS },
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
 
@@ -61,7 +61,12 @@ class ObdMetricsCollector(
                     }
                     val snapshot = readSnapshot(vin, catalog) ?: break
                     emit(snapshot)
-                    delay(pollIntervalMs)
+                    delay(
+                        pollIntervalMs().coerceIn(
+                            CollectionInterval.MIN_MILLIS,
+                            CollectionInterval.MAX_MILLIS,
+                        ),
+                    )
                 }
             } finally {
                 AppLog.i("OBD metric stream stopped")
@@ -128,7 +133,7 @@ class ObdMetricsCollector(
         }
 
     companion object {
-        const val DEFAULT_POLL_INTERVAL_MS = 1_000L
+        const val DEFAULT_POLL_INTERVAL_MS = CollectionInterval.DEFAULT_MILLIS
     }
 }
 

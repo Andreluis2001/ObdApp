@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -42,7 +41,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,13 +64,11 @@ import com.app.drivedata.metrics.model.MetricId
 import com.app.drivedata.metrics.model.MetricsSnapshot
 import com.app.drivedata.metrics.model.ReadingValue
 import com.app.drivedata.obd.model.ObdConnectionState
-import com.app.drivedata.sync.SyncError
 import com.app.drivedata.ui.common.LightStatusBarIcons
+import com.app.drivedata.ui.common.syncErrorMessage
 import com.app.drivedata.ui.common.formatBytes
-import com.app.drivedata.ui.common.formatClockTime
-import com.app.drivedata.ui.common.formatDateTime
 import com.app.drivedata.ui.common.formatMetricValue
-import com.app.drivedata.ui.common.isSameDay
+import com.app.drivedata.ui.common.lastSyncText
 import com.app.drivedata.ui.common.MetricSparkline
 import com.app.drivedata.ui.common.TintedIconBadge
 import com.app.drivedata.ui.metrics.MetricPresentation
@@ -99,7 +95,6 @@ fun HomeScreen(
     onSeeAllReadings: () -> Unit,
     onOpenVehicles: () -> Unit,
     onSelectVehicle: (String) -> Unit,
-    onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -109,7 +104,6 @@ fun HomeScreen(
         onSeeAllReadings = onSeeAllReadings,
         onOpenVehicles = onOpenVehicles,
         onSelectVehicle = onSelectVehicle,
-        onSignOut = onSignOut,
         modifier = modifier,
     )
 }
@@ -120,7 +114,6 @@ private fun HomeContent(
     onSeeAllReadings: () -> Unit,
     onOpenVehicles: () -> Unit,
     onSelectVehicle: (String) -> Unit,
-    onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -135,7 +128,6 @@ private fun HomeContent(
             vehicles = state.vehicles,
             onSelectVehicle = onSelectVehicle,
             onManageVehicles = onOpenVehicles,
-            onSignOut = onSignOut,
         )
         Column(
             modifier = Modifier
@@ -167,7 +159,6 @@ private fun HomeHeader(
     vehicles: List<Vehicle>,
     onSelectVehicle: (String) -> Unit,
     onManageVehicles: () -> Unit,
-    onSignOut: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val orderedVehicles = vehicles.sortedByDescending { it.isActive }
@@ -193,16 +184,6 @@ private fun HomeHeader(
                 color = Color.White,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(
-                onClick = onSignOut,
-                colors = ButtonDefaults.textButtonColors(contentColor = HomeRed),
-            ) {
-                Text(
-                    text = stringResource(R.string.action_sign_out),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
         }
         Box {
             Row(
@@ -379,7 +360,7 @@ private fun CollectionCard(state: HomeUiState) {
                 }
                 state.syncError?.let { error ->
                     Text(
-                        text = stringResource(error.messageRes()),
+                        text = error.syncErrorMessage(),
                         style = MaterialTheme.typography.bodySmall,
                         color = HomeRed,
                     )
@@ -707,26 +688,6 @@ private fun SectionTitle(text: String) {
         color = HomeTextPrimary,
     )
 }
-
-@Composable
-private fun lastSyncText(millis: Long?): String {
-    if (millis == null) return stringResource(R.string.home_sync_never)
-    val time = formatClockTime(millis)
-    return if (isSameDay(millis)) {
-        stringResource(R.string.home_sync_today, time)
-    } else {
-        formatDateTime(millis)
-    }
-}
-
-@Composable
-private fun SyncError.messageRes(): Int =
-    when (this) {
-        SyncError.NETWORK -> R.string.home_sync_error_network
-        SyncError.AUTH -> R.string.home_sync_error_auth
-        SyncError.SERVER -> R.string.home_sync_error_server
-        SyncError.UNKNOWN -> R.string.home_sync_error_unknown
-    }
 
 private fun MetricsSnapshot?.reading(id: MetricId): ReadingValue? =
     this?.readings?.firstOrNull { it.id == id }?.value

@@ -37,6 +37,11 @@ interface MetricRecordDao {
     @Query("SELECT * FROM metric_records WHERE id = :id LIMIT 1")
     suspend fun findWithReadingsById(id: String): MetricRecordWithReadings?
 
+    /** Observable variant used by the offline details screen so status changes are reflected. */
+    @Transaction
+    @Query("SELECT * FROM metric_records WHERE id = :id LIMIT 1")
+    fun observeWithReadingsById(id: String): Flow<MetricRecordWithReadings?>
+
     @Query(
         "UPDATE metric_records SET upload_status = :status, uploaded_at_millis = :uploadedAtMillis, " +
             "last_error = NULL WHERE id IN (:ids) AND upload_status = :pendingStatus",
@@ -80,6 +85,22 @@ interface MetricRecordDao {
     )
     fun observeLatestUploadedAtMillis(owner: String, status: UploadStatus): Flow<Long?>
 
+    /** Newest records first; bounded so a long collection session cannot flood the offline list. */
+    @Query(
+        "SELECT r.id, r.vin, r.collected_at_millis, r.upload_status, r.uploaded_at_millis, " +
+            "r.last_error, " +
+            "(SELECT COUNT(*) FROM metric_readings m WHERE m.record_id = r.id) AS reading_count " +
+            "FROM metric_records r WHERE r.owner_username = :owner " +
+            "ORDER BY r.collected_at_millis DESC, r.id DESC LIMIT :limit",
+    )
+    fun observeRecentRecords(
+        owner: String,
+        limit: Int = DEFAULT_RECENT_LIMIT,
+    ): Flow<List<StoredRecordSummary>>
+
+    @Query("SELECT COUNT(*) FROM metric_records WHERE owner_username = :owner")
+    fun observeTotalCount(owner: String): Flow<Int>
+
     @Query(
         "DELETE FROM metric_readings WHERE record_id IN (" +
             "SELECT id FROM metric_records WHERE upload_status = :uploadedStatus " +
@@ -104,5 +125,6 @@ interface MetricRecordDao {
 
     companion object {
         const val DEFAULT_PAGE_SIZE = 100
+        const val DEFAULT_RECENT_LIMIT = 200
     }
 }

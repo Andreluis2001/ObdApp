@@ -6,6 +6,7 @@ import com.app.drivedata.auth.AuthSession
 import com.app.drivedata.auth.DataStoreAuthTokenStore
 import com.app.drivedata.connectivity.ConnectivityObserver
 import com.app.drivedata.metrics.ActiveVehicleCollection
+import com.app.drivedata.metrics.CollectionInterval
 import com.app.drivedata.metrics.MetricsCollectionController
 import com.app.drivedata.metrics.MetricsRepository
 import com.app.drivedata.metrics.ObdMetricsCollector
@@ -36,10 +37,24 @@ class AppContainer(context: Context) {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val settingsRepository = AppSettingsRepository(appContext)
+
+    /** Cached so the collector can read the latest value without collecting the DataStore flow itself. */
+    val collectionIntervalSeconds: StateFlow<Long> =
+        settingsRepository.collectionIntervalSeconds
+            .stateIn(
+                scope = applicationScope,
+                started = SharingStarted.Eagerly,
+                initialValue = CollectionInterval.DEFAULT_SECONDS,
+            )
+
     val obdConnectionManager = ObdConnectionManager(WifiNetworkLookup(appContext))
     val pidDiscoveryCoordinator = PidDiscoveryCoordinator(obdConnectionManager)
     val vehicleIdentityExtractor = VehicleIdentityExtractor(VinReader(obdConnectionManager)::read)
-    val metricsCollector = ObdMetricsCollector(obdConnectionManager)
+    val metricsCollector =
+        ObdMetricsCollector(
+            connectionManager = obdConnectionManager,
+            pollIntervalMs = { collectionIntervalSeconds.value * 1_000L },
+        )
     val connectivityObserver = ConnectivityObserver(appContext)
 
     private val database = DriveDataDatabase.build(appContext)

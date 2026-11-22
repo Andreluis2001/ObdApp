@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.app.drivedata.DriveDataApplication
 import com.app.drivedata.metrics.ActiveVehicleCollection
 import com.app.drivedata.metrics.MetricsCollectionState
+import com.app.drivedata.metrics.MetricsRepository
 import com.app.drivedata.metrics.model.MetricId
 import com.app.drivedata.metrics.model.MetricsSnapshot
 import com.app.drivedata.obd.model.EcuStatus
@@ -45,14 +46,10 @@ data class HomeUiState(
     val storageBudgetBytes: Long = 0L,
 ) {
     val pendingBytes: Long
-        get() = pendingCount * ESTIMATED_RECORD_BYTES
+        get() = pendingCount * MetricsRepository.ESTIMATED_RECORD_BYTES
 
     val canSyncNow: Boolean
         get() = internetAvailable && !isSyncing && pendingCount > 0
-
-    companion object {
-        const val ESTIMATED_RECORD_BYTES = 4L * 1024
-    }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

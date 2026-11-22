@@ -15,6 +15,7 @@
     <string name="action_back">Voltar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_close">Fechar</string>
+    <string name="action_save">Salvar</string>
     <string name="action_understood">Entendi</string>
 
     <string name="connection_title">Conexão</string>
@@ -80,6 +81,85 @@
     <string name="tab_vehicles">Veículos</string>
     <string name="tab_connection">Conexão</string>
     <string name="tab_metrics">Leituras</string>
+    <string name="tab_profile">Perfil</string>
+    <string name="tab_offline">Offline</string>
+
+    <string name="offline_title">Dados offline</string>
+    <string name="offline_subtitle">Armazenamento local</string>
+    <string name="offline_no_pending">Nenhum registro pendente</string>
+    <plurals name="offline_pending_count">
+        <item quantity="one">%1$d registro pendente</item>
+        <item quantity="other">%1$d registros pendentes</item>
+    </plurals>
+    <string name="offline_pending_size">~ %1$s</string>
+    <string name="offline_pending_hint">O envio será realizado quando houver conexão com a internet.</string>
+    <string name="offline_sync_title">Sincronização</string>
+    <string name="offline_sync_in_progress">Enviando dados\u2026</string>
+    <string name="offline_sync_waiting">Aguardando conexão com a internet.</string>
+    <string name="offline_sync_preparing">Preparando envio\u2026</string>
+    <string name="offline_sync_done">Todos os dados foram sincronizados.</string>
+    <string name="offline_storage_title">Armazenamento</string>
+    <string name="offline_storage_value">%1$s / %2$s</string>
+    <string name="offline_storage_percent">%1$s%% utilizado</string>
+    <string name="offline_last_sync">Última sincronização</string>
+    <string name="offline_manage_title">Gerenciar dados</string>
+    <string name="offline_view_records">Ver registros armazenados</string>
+    <string name="offline_view_records_subtitle">Detalhes dos dados locais</string>
+    <plurals name="offline_stored_count">
+        <item quantity="one">%1$d registro armazenado</item>
+        <item quantity="other">%1$d registros armazenados</item>
+    </plurals>
+    <string name="offline_records_title">Registros armazenados</string>
+    <string name="offline_records_subtitle">Dados locais</string>
+    <string name="offline_records_empty">Nenhum registro armazenado</string>
+    <string name="offline_records_empty_message">Os registros coletados aparecerão aqui enquanto aguardam o envio ao servidor.</string>
+    <string name="offline_records_limit_note">Mostrando os %1$d registros mais recentes.</string>
+    <string name="offline_status_pending">Pendente</string>
+    <string name="offline_status_uploaded">Sincronizado</string>
+    <string name="offline_status_rejected">Rejeitado</string>
+    <string name="offline_record_vin">VIN %1$s</string>
+    <string name="offline_record_vin_unknown">VIN não informado</string>
+    <plurals name="offline_record_readings">
+        <item quantity="one">%1$d parâmetro</item>
+        <item quantity="other">%1$d parâmetros</item>
+    </plurals>
+    <string name="offline_record_uploaded_at">Sincronizado em %1$s</string>
+    <string name="offline_record_waiting">Aguardando sincronização</string>
+    <string name="offline_record_rejected_reason">Motivo: %1$s</string>
+    <string name="offline_record_view_details">Ver parâmetros</string>
+    <string name="offline_details_title">Detalhes da coleta</string>
+    <string name="offline_details_subtitle">Parâmetros registrados</string>
+    <string name="offline_details_parameters">Parâmetros</string>
+    <string name="offline_details_not_found">Registro não encontrado</string>
+    <string name="offline_details_not_found_message">Este registro não está mais disponível no armazenamento local.</string>
+    <string name="offline_details_range">Faixa: %1$s \u2013 %2$s %3$s</string>
+    <string name="offline_details_attempts">Tentativas de envio: %1$d</string>
+
+    <string name="profile_title">Perfil</string>
+    <string name="profile_settings">Configurações</string>
+    <string name="profile_collection_settings">Configurações de coleta</string>
+    <string name="profile_collection_interval">Intervalo: %1$d s</string>
+    <string name="profile_collection_interval_value">A cada %1$d s</string>
+    <string name="profile_collection_interval_min">Mín. %1$d s</string>
+    <string name="profile_collection_interval_max">Máx. %1$d s</string>
+    <string name="profile_connection">Conexão</string>
+    <string name="profile_connection_online">ELM327 conectado · Internet disponível</string>
+    <string name="profile_connection_adapter_only">ELM327 conectado · Internet indisponível</string>
+    <string name="profile_connection_internet_only">ELM327 desconectado · Internet disponível</string>
+    <string name="profile_connection_offline">ELM327 desconectado · Internet indisponível</string>
+    <string name="profile_about">Sobre o aplicativo</string>
+    <string name="profile_version">Versão %1$s</string>
+    <plurals name="profile_vehicle_count">
+        <item quantity="one">%1$d veículo</item>
+        <item quantity="other">%1$d veículos</item>
+    </plurals>
+    <string name="profile_collection_dialog_title">Configurações de coleta</string>
+    <plurals name="profile_collection_dialog_message">
+        <item quantity="one">A coleta é contínua e consulta o veículo a cada %1$d segundo enquanto o adaptador está conectado.</item>
+        <item quantity="other">A coleta é contínua e consulta o veículo a cada %1$d segundos enquanto o adaptador está conectado.</item>
+    </plurals>
+    <string name="profile_about_dialog_title">Sobre o aplicativo</string>
+    <string name="profile_about_dialog_message">Drive Data — telemetria veicular com ELM327. Versão %1$s.</string>
 
     <string name="home_no_active_vehicle">Nenhum veículo ativo</string>
     <string name="home_select_vehicle">Selecionar veículo</string>
