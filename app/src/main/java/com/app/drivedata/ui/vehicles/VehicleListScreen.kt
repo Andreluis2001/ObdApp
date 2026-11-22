@@ -1,9 +1,11 @@
 package com.app.drivedata.ui.vehicles
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,12 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,14 +28,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.drivedata.R
+import com.app.drivedata.ui.common.AppCard
 import com.app.drivedata.ui.common.LightStatusBarIcons
 import com.app.drivedata.ui.common.ScreenHeader
+import com.app.drivedata.ui.preview.previewVehicleListState
+import com.app.drivedata.ui.theme.Dimens
+import com.app.drivedata.ui.theme.DriveDataTheme
 import com.app.drivedata.ui.theme.HomeBackground
 import com.app.drivedata.ui.theme.HomeBlue
-import com.app.drivedata.ui.theme.HomeSurface
 import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
 import com.app.drivedata.ui.vehicles.components.VehicleCard
@@ -52,44 +55,56 @@ fun VehicleListScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LightStatusBarIcons()
+    BackHandler(onBack = onBack)
 
+    VehicleListContent(
+        state = state,
+        onOpenVehicle = onOpenVehicle,
+        onDismissError = viewModel::dismissError,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun VehicleListContent(
+    state: VehicleListUiState,
+    onOpenVehicle: (String) -> Unit,
+    onDismissError: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(HomeBackground),
+        modifier = modifier
+            .fillMaxSize()
+            .background(HomeBackground),
     ) {
         ScreenHeader(
             title = stringResource(R.string.vehicles_title),
             subtitle = stringResource(R.string.vehicles_subtitle),
-            onBack = onBack,
         )
 
         Column(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(Dimens.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(Dimens.CardSpacing),
         ) {
             state.error?.let { error ->
                 VehicleErrorBanner(
                     message = error.message(),
-                    onDismiss = viewModel::dismissError,
+                    onDismiss = onDismissError,
                 )
             }
 
             when {
                 state.isLoading ->
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 40.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator(color = HomeBlue)
+                    AppCard(contentPadding = PaddingValues(vertical = 40.dp)) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(color = HomeBlue)
+                        }
                     }
 
                 state.vehicles.isEmpty() -> EmptyVehicles()
@@ -110,23 +125,16 @@ fun VehicleListScreen(
 
 @Composable
 private fun EmptyVehicles() {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = HomeSurface),
-        shape = RoundedCornerShape(20.dp),
-    ) {
+    AppCard(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 28.dp)) {
         Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 28.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(Dimens.CardSpacing),
         ) {
             Box(
-                modifier =
-                    Modifier
-                        .size(68.dp)
-                        .background(HomeBlue.copy(alpha = 0.10f), CircleShape),
+                modifier = Modifier
+                    .size(68.dp)
+                    .background(HomeBlue.copy(alpha = 0.10f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -139,7 +147,7 @@ private fun EmptyVehicles() {
             Text(
                 text = stringResource(R.string.vehicles_empty_title),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Medium,
                 color = HomeTextPrimary,
                 textAlign = TextAlign.Center,
             )
@@ -161,3 +169,76 @@ private fun VehicleListError.message(): String =
             VehicleListError.DELETE_FAILED -> R.string.vehicle_error_delete
         },
     )
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFFEEF3FA,
+    widthDp = 360,
+    heightDp = 800,
+    name = "Vehicles - list",
+)
+@Composable
+private fun VehicleListPreview() {
+    DriveDataTheme {
+        VehicleListContent(
+            state = previewVehicleListState(),
+            onOpenVehicle = {},
+            onDismissError = {},
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFFEEF3FA,
+    widthDp = 360,
+    heightDp = 800,
+    name = "Vehicles - empty",
+)
+@Composable
+private fun VehiclesEmptyPreview() {
+    DriveDataTheme {
+        VehicleListContent(
+            state = previewVehicleListState(vehicles = emptyList()),
+            onOpenVehicle = {},
+            onDismissError = {},
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFFEEF3FA,
+    widthDp = 360,
+    heightDp = 800,
+    name = "Vehicles - loading and error",
+)
+@Composable
+private fun VehiclesLoadingPreview() {
+    DriveDataTheme {
+        VehicleListContent(
+            state = previewVehicleListState(isLoading = true, error = VehicleListError.ACTIVATE_FAILED),
+            onOpenVehicle = {},
+            onDismissError = {},
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFFEEF3FA,
+    widthDp = 320,
+    heightDp = 760,
+    fontScale = 1.3f,
+    name = "Vehicles - small width, large text",
+)
+@Composable
+private fun VehiclesLargeTextPreview() {
+    DriveDataTheme {
+        VehicleListContent(
+            state = previewVehicleListState(),
+            onOpenVehicle = {},
+            onDismissError = {},
+        )
+    }
+}

@@ -16,8 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,10 +27,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.app.drivedata.R
+import com.app.drivedata.ui.common.AppCard
 import com.app.drivedata.ui.common.StatusLabel
+import com.app.drivedata.ui.theme.Dimens
 import com.app.drivedata.ui.theme.HomeBlue
 import com.app.drivedata.ui.theme.HomeDivider
-import com.app.drivedata.ui.theme.HomeSurface
 import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
 import com.app.drivedata.vehicle.model.Vehicle
@@ -44,30 +43,24 @@ fun VehicleCard(
     modifier: Modifier = Modifier,
 ) {
     val active = vehicle.isActive
-    Card(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clickable(onClick = onOpenDetails),
-        colors = CardDefaults.cardColors(containerColor = HomeSurface),
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(
-            width = if (active) 2.dp else 1.dp,
-            color = if (active) HomeBlue else HomeDivider,
-        ),
+    AppCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onOpenDetails),
+        border =
+            BorderStroke(
+                width = if (active) 2.dp else 1.dp,
+                color = if (active) HomeBlue else HomeDivider,
+            ),
     ) {
         Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 14.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                modifier =
-                    Modifier
-                        .size(64.dp)
-                        .background(HomeBlue.copy(alpha = 0.10f), RoundedCornerShape(14.dp)),
+                modifier = Modifier
+                    .size(64.dp)
+                    .background(HomeBlue.copy(alpha = 0.10f), RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -77,7 +70,7 @@ fun VehicleCard(
                     modifier = Modifier.size(34.dp),
                 )
             }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(Dimens.CardSpacing))
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -85,39 +78,35 @@ fun VehicleCard(
                 Text(
                     text = vehicle.displayName,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Medium,
                     color = HomeTextPrimary,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 vehicleSubtitle(vehicle)?.let { subtitle ->
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelMedium,
                         color = HomeTextSecondary,
-                        maxLines = 1,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
+                if (vehicle.connection.status.shouldShowStatus()) {
                     StatusLabel(
                         color = vehicle.connection.status.color(),
                         label = vehicle.connection.status.label(),
-                        modifier = Modifier.weight(1f, fill = false),
                     )
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (active) {
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = stringResource(R.string.vehicle_active_badge),
-                        tint = HomeBlue,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
+            if (active) {
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = stringResource(R.string.vehicle_active_badge),
+                    tint = HomeBlue,
+                    modifier = Modifier.size(20.dp),
+                )
             }
         }
     }

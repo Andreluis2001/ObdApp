@@ -1,5 +1,6 @@
 package com.app.drivedata.ui.metrics
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -14,14 +15,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
@@ -52,6 +51,7 @@ import com.app.drivedata.obd.model.EcuStatus
 import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.ui.common.LightStatusBarIcons
 import com.app.drivedata.ui.common.MetricSparkline
+import com.app.drivedata.ui.common.ScreenHeader
 import com.app.drivedata.ui.common.TintedIconBadge
 import com.app.drivedata.ui.common.formatClockTime
 import com.app.drivedata.ui.common.formatDateTime
@@ -65,8 +65,6 @@ import com.app.drivedata.ui.theme.HomeRed
 import com.app.drivedata.ui.theme.HomeSurface
 import com.app.drivedata.ui.theme.HomeTextPrimary
 import com.app.drivedata.ui.theme.HomeTextSecondary
-import com.app.drivedata.ui.theme.LoginBackgroundTop
-import com.app.drivedata.ui.theme.LoginTextMuted
 
 private enum class ParametersTab { REALTIME, DIAGNOSTICS }
 
@@ -79,6 +77,7 @@ fun MetricsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableStateOf(ParametersTab.REALTIME) }
     LightStatusBarIcons()
+    BackHandler(onBack = onBack)
     MetricsContent(
         state = state,
         selectedTab = selectedTab,
@@ -86,7 +85,6 @@ fun MetricsScreen(
         onToggleCollection = {
             if (state.isCollecting) viewModel.stopCollection() else viewModel.startCollection()
         },
-        onBack = onBack,
         modifier = modifier,
     )
 }
@@ -97,7 +95,6 @@ private fun MetricsContent(
     selectedTab: ParametersTab,
     onTabSelected: (ParametersTab) -> Unit,
     onToggleCollection: () -> Unit,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -105,80 +102,38 @@ private fun MetricsContent(
             .fillMaxSize()
             .background(HomeBackground),
     ) {
-        ParametersHeader(
-            vehicleName = state.vehicleName,
-            hasVehicle = state.hasVehicle,
-            isCollecting = state.isCollecting,
-            canToggleCollection = state.isEcuVerified && state.canCollect,
-            onToggleCollection = onToggleCollection,
-            onBack = onBack,
+        val canToggleCollection = state.isEcuVerified && state.canCollect
+        ScreenHeader(
+            title = stringResource(R.string.metrics_title),
+            subtitle =
+                if (state.hasVehicle) {
+                    state.vehicleName
+                } else {
+                    stringResource(R.string.metrics_no_active_vehicle)
+                },
+            actions = {
+                if (canToggleCollection) {
+                    IconButton(onClick = onToggleCollection) {
+                        Icon(
+                            imageVector =
+                                if (state.isCollecting) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            contentDescription = stringResource(
+                                if (state.isCollecting) {
+                                    R.string.metrics_pause_collection
+                                } else {
+                                    R.string.metrics_resume_collection
+                                },
+                            ),
+                            tint = Color.White,
+                        )
+                    }
+                }
+            },
         )
         ParametersTabs(selected = selectedTab, onSelected = onTabSelected)
         when (selectedTab) {
             ParametersTab.REALTIME -> RealtimeParameters(state = state, modifier = Modifier.weight(1f))
             ParametersTab.DIAGNOSTICS -> Diagnostics(state = state, modifier = Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun ParametersHeader(
-    vehicleName: String,
-    hasVehicle: Boolean,
-    isCollecting: Boolean,
-    canToggleCollection: Boolean,
-    onToggleCollection: () -> Unit,
-    onBack: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(LoginBackgroundTop)
-            .statusBarsPadding()
-            .padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 14.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.action_back),
-                    tint = Color.White,
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.metrics_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
-                )
-                Text(
-                    text =
-                        if (hasVehicle) {
-                            vehicleName
-                        } else {
-                            stringResource(R.string.metrics_no_active_vehicle)
-                        },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = LoginTextMuted,
-                )
-            }
-            if (canToggleCollection) {
-                IconButton(onClick = onToggleCollection) {
-                    Icon(
-                        imageVector =
-                            if (isCollecting) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = stringResource(
-                            if (isCollecting) {
-                                R.string.metrics_pause_collection
-                            } else {
-                                R.string.metrics_resume_collection
-                            },
-                        ),
-                        tint = Color.White,
-                    )
-                }
-            }
         }
     }
 }

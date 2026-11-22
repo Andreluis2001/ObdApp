@@ -19,16 +19,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.app.drivedata.R
-import com.app.drivedata.ui.theme.LoginBackgroundTop
-import com.app.drivedata.ui.theme.LoginTextMuted
+import com.app.drivedata.ui.theme.HeaderGradient
+import com.app.drivedata.ui.theme.HeaderTextMuted
 
-/** Dark navy header shared by the tab sub-screens. */
+/** Dark navy header shared by the app screens. [onBack] is optional for tab-level screens. */
 @Composable
 fun ScreenHeader(
     title: String,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
     subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
@@ -36,30 +38,44 @@ fun ScreenHeader(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(LoginBackgroundTop)
+                .background(HeaderGradient)
                 .statusBarsPadding()
-                .padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 14.dp),
+                .padding(
+                    start = if (onBack != null) 4.dp else 16.dp,
+                    end = 4.dp,
+                    top = 4.dp,
+                    bottom = 14.dp,
+                ),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.action_back),
-                    tint = Color.White,
-                )
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.action_back),
+                        tint = Color.White,
+                    )
+                }
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Medium,
+                        ),
                     color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (subtitle != null) {
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = LoginTextMuted,
+                        color = HeaderTextMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

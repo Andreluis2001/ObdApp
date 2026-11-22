@@ -96,11 +96,11 @@ fun OfflineScreen(
         }
     }
 
-    BackHandler(enabled = route != OfflineRoute.SUMMARY) {
+    BackHandler {
         when (route) {
             OfflineRoute.DETAILS -> closeDetails()
             OfflineRoute.RECORDS -> route = OfflineRoute.SUMMARY
-            OfflineRoute.SUMMARY -> Unit
+            OfflineRoute.SUMMARY -> onBack()
         }
     }
 
@@ -108,7 +108,6 @@ fun OfflineScreen(
         OfflineRoute.SUMMARY ->
             OfflineSummary(
                 state = state,
-                onBack = onBack,
                 onOpenRecords = { route = OfflineRoute.RECORDS },
                 modifier = modifier,
             )
@@ -133,7 +132,6 @@ fun OfflineScreen(
 @Composable
 private fun OfflineSummary(
     state: OfflineUiState,
-    onBack: () -> Unit,
     onOpenRecords: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -145,7 +143,6 @@ private fun OfflineSummary(
         ScreenHeader(
             title = stringResource(R.string.offline_title),
             subtitle = stringResource(R.string.offline_subtitle),
-            onBack = onBack,
         )
 
         Column(
