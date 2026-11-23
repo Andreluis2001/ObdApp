@@ -154,6 +154,29 @@ class MetricsCollectionControllerTest {
         }
 
     @Test
+    fun aUserStopSurvivesAConnectionLoss() =
+        runTest {
+            val harness = Harness(this)
+            harness.connection.value = connected()
+            harness.active.value = collection(vehicleId = "v1", catalog = listOf(rpmDefinition))
+            advanceUntilIdle()
+            harness.controller.stopCollection()
+
+            harness.connection.value = ObdConnectionState.Disconnected
+            advanceUntilIdle()
+            harness.connection.value = connected()
+            harness.active.value = collection(vehicleId = "v2", catalog = listOf(speedDefinition))
+            advanceUntilIdle()
+
+            assertEquals(1, harness.requestedCatalogs.size)
+
+            harness.controller.startCollection()
+            advanceUntilIdle()
+
+            assertEquals(2, harness.requestedCatalogs.size)
+        }
+
+    @Test
     fun maintenancePauseKeepsCollectionStoppedUntilResumed() =
         runTest {
             val harness = Harness(this)

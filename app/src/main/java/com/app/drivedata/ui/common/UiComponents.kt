@@ -201,6 +201,8 @@ fun PrimaryButton(
     enabled: Boolean = true,
     icon: ImageVector? = null,
     iconContentDescription: String? = null,
+    containerColor: Color = HomeBlue,
+    contentColor: Color = Color.White,
 ) {
     Button(
         onClick = onClick,
@@ -211,10 +213,10 @@ fun PrimaryButton(
         shape = RoundedCornerShape(Dimens.InnerCorner),
         colors =
             ButtonDefaults.buttonColors(
-                containerColor = HomeBlue,
-                contentColor = Color.White,
-                disabledContainerColor = HomeBlue.copy(alpha = 0.35f),
-                disabledContentColor = Color.White.copy(alpha = 0.75f),
+                containerColor = containerColor,
+                contentColor = contentColor,
+                disabledContainerColor = containerColor.copy(alpha = 0.35f),
+                disabledContentColor = contentColor.copy(alpha = 0.75f),
             ),
     ) {
         if (icon != null) {

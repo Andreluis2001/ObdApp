@@ -31,10 +31,15 @@ import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SettingsInputAntenna
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -61,6 +66,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.drivedata.R
+import com.app.drivedata.metrics.CollectionStartResult
 import com.app.drivedata.metrics.model.MetricId
 import com.app.drivedata.metrics.model.MetricsSnapshot
 import com.app.drivedata.metrics.model.ReadingValue
@@ -68,6 +74,7 @@ import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.ui.common.AppCard
 import com.app.drivedata.ui.common.LightStatusBarIcons
 import com.app.drivedata.ui.common.MetricSparkline
+import com.app.drivedata.ui.common.PrimaryButton
 import com.app.drivedata.ui.common.SectionHeader
 import com.app.drivedata.ui.common.TintedIconBadge
 import com.app.drivedata.ui.common.formatBytes
@@ -109,6 +116,8 @@ fun HomeScreen(
         onSeeAllReadings = onSeeAllReadings,
         onOpenVehicles = onOpenVehicles,
         onSelectVehicle = onSelectVehicle,
+        onStartCollection = viewModel::startCollection,
+        onStopCollection = viewModel::stopCollection,
         modifier = modifier,
     )
 }
@@ -119,6 +128,8 @@ private fun HomeContent(
     onSeeAllReadings: () -> Unit,
     onOpenVehicles: () -> Unit,
     onSelectVehicle: (String) -> Unit,
+    onStartCollection: () -> Unit,
+    onStopCollection: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -142,7 +153,11 @@ private fun HomeContent(
                 .padding(Dimens.ScreenPadding),
             verticalArrangement = Arrangement.spacedBy(Dimens.CardSpacing),
         ) {
-            CollectionCard(state = state)
+            CollectionCard(
+                state = state,
+                onStartCollection = onStartCollection,
+                onStopCollection = onStopCollection,
+            )
 
             SectionHeader(stringResource(R.string.home_main_parameters))
             MainParameters(history = state.history, snapshot = state.snapshot)
@@ -321,7 +336,11 @@ private fun HomeHeader(
 }
 
 @Composable
-private fun CollectionCard(state: HomeUiState) {
+private fun CollectionCard(
+    state: HomeUiState,
+    onStartCollection: () -> Unit,
+    onStopCollection: () -> Unit,
+) {
     val adapterConnected = state.connection is ObdConnectionState.Connected
     AppCard(
         elevation = 3.dp,
@@ -377,6 +396,96 @@ private fun CollectionCard(state: HomeUiState) {
                     )
                 }
             }
+        }
+        CollectionControls(
+            state = state,
+            onStartCollection = onStartCollection,
+            onStopCollection = onStopCollection,
+        )
+    }
+}
+
+@Composable
+private fun CollectionControls(
+    state: HomeUiState,
+    onStartCollection: () -> Unit,
+    onStopCollection: () -> Unit,
+) {
+    if (!state.hasVehicle) return
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        when {
+            state.isCollecting ->
+                PrimaryButton(
+                    label = stringResource(R.string.home_pause_collection),
+                    onClick = onStopCollection,
+                    icon = Icons.Filled.Pause,
+                    containerColor = HomeRed,
+                )
+
+            state.isStartingCollection ->
+                Button(
+                    onClick = onStopCollection,
+                    enabled = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(Dimens.InnerCorner),
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = HomeBlue.copy(alpha = 0.35f),
+                            contentColor = Color.White,
+                        ),
+                ) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = stringResource(R.string.home_collection_starting),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+
+            else ->
+                PrimaryButton(
+                    label = stringResource(R.string.home_continue_collection),
+                    onClick = onStartCollection,
+                    enabled = state.canStartCollection && !state.isAdapterBusy,
+                    icon = Icons.Filled.PlayArrow,
+                )
+        }
+
+        val hint =
+            when {
+                state.collectionStartFailure == CollectionStartResult.ECU_UNAVAILABLE ->
+                    stringResource(R.string.home_collection_ecu_unavailable) to HomeRed
+
+                state.collectionStartFailure == CollectionStartResult.CONNECTION_FAILED ->
+                    stringResource(R.string.home_collection_connection_failed) to HomeRed
+
+                state.collectionStartFailure == CollectionStartResult.NO_ADAPTER ->
+                    stringResource(R.string.home_collection_no_adapter) to HomeRed
+
+                state.collectionStartFailure != null ->
+                    stringResource(R.string.metrics_collection_unavailable) to HomeRed
+
+                !state.canCollect -> stringResource(R.string.metrics_collection_unavailable) to HomeTextSecondary
+
+                !state.hasAdapterConfig ->
+                    stringResource(R.string.home_collection_no_adapter) to HomeTextSecondary
+
+                else -> null
+            }
+        if (hint != null) {
+            Text(
+                text = hint.first,
+                style = MaterialTheme.typography.bodySmall,
+                color = hint.second,
+            )
         }
     }
 }
@@ -708,6 +817,29 @@ private fun HomeCollectingPreview() {
             onSeeAllReadings = {},
             onOpenVehicles = {},
             onSelectVehicle = {},
+            onStartCollection = {},
+            onStopCollection = {},
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFFEEF3FA,
+    widthDp = 360,
+    heightDp = 800,
+    name = "Home - collection paused",
+)
+@Composable
+private fun HomePausedPreview() {
+    DriveDataTheme {
+        HomeContent(
+            state = previewHomeState(collecting = false, rejectedCount = 0, syncError = null),
+            onSeeAllReadings = {},
+            onOpenVehicles = {},
+            onSelectVehicle = {},
+            onStartCollection = {},
+            onStopCollection = {},
         )
     }
 }
@@ -728,6 +860,8 @@ private fun HomeIdlePreview() {
             onSeeAllReadings = {},
             onOpenVehicles = {},
             onSelectVehicle = {},
+            onStartCollection = {},
+            onStopCollection = {},
         )
     }
 }

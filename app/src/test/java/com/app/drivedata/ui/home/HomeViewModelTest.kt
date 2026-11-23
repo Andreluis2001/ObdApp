@@ -1,6 +1,7 @@
 package com.app.drivedata.ui.home
 
 import com.app.drivedata.metrics.ActiveVehicleCollection
+import com.app.drivedata.metrics.CollectionStartResult
 import com.app.drivedata.metrics.MetricsCollectionState
 import com.app.drivedata.metrics.defaultMetricCatalog
 import com.app.drivedata.metrics.model.MetricId
@@ -128,6 +129,79 @@ class HomeViewModelTest {
             assertEquals(listOf(vehicle), selected)
         }
 
+    @Test
+    fun exposesCollectionStartAvailabilityForTheDashboardToggle() =
+        runTest {
+            val viewModel = homeViewModel()
+
+            val state = viewModel.awaitState { it.pendingCount == 12 }
+
+            assertTrue(state.canCollect)
+            assertTrue(state.hasAdapterConfig)
+            assertTrue(state.canStartCollection)
+            assertFalse(state.isAdapterBusy)
+            assertFalse(state.isStartingCollection)
+        }
+
+    @Test
+    fun disablesCollectionStartWhenTheVehicleIsNotReady() =
+        runTest {
+            val viewModel =
+                homeViewModel(
+                    activeVehicle = flowOf(activeVehicle().copy(hasDiscovery = false)),
+                )
+
+            val state = viewModel.awaitState { it.pendingCount == 12 }
+
+            assertFalse(state.canCollect)
+            assertFalse(state.canStartCollection)
+        }
+
+    @Test
+    fun stopCollectionDelegatesToTheController() =
+        runTest {
+            var stopCalls = 0
+            val viewModel = homeViewModel(stopCollectionSession = { stopCalls++ })
+
+            viewModel.stopCollection()
+
+            assertEquals(1, stopCalls)
+        }
+
+    @Test
+    fun startCollectionDelegatesToTheResumeSession() =
+        runTest {
+            var startCalls = 0
+            val viewModel =
+                homeViewModel(
+                    startCollectionSession = {
+                        startCalls++
+                        CollectionStartResult.STARTED
+                    },
+                )
+            viewModel.awaitState { it.pendingCount == 12 }
+
+            viewModel.startCollection()
+
+            assertEquals(1, startCalls)
+        }
+
+    @Test
+    fun exposesCollectionStartFailureOnTheDashboard() =
+        runTest {
+            val viewModel =
+                homeViewModel(
+                    startCollectionSession = { CollectionStartResult.CONNECTION_FAILED },
+                )
+            viewModel.awaitState { it.pendingCount == 12 }
+
+            viewModel.startCollection()
+
+            val state = viewModel.awaitState { it.collectionStartFailure != null }
+            assertEquals(CollectionStartResult.CONNECTION_FAILED, state.collectionStartFailure)
+            assertFalse(state.isStartingCollection)
+        }
+
     private fun homeViewModel(
         connection: MutableStateFlow<ObdConnectionState> =
             MutableStateFlow(ObdConnectionState.Disconnected),
@@ -136,6 +210,8 @@ class HomeViewModelTest {
         syncStatus: MutableStateFlow<SyncStatus> = MutableStateFlow(SyncStatus()),
         activeVehicle: Flow<ActiveVehicleCollection?> = flowOf(activeVehicle()),
         vehicles: Flow<List<Vehicle>> = flowOf(emptyList()),
+        startCollectionSession: suspend () -> CollectionStartResult = { CollectionStartResult.STARTED },
+        stopCollectionSession: () -> Unit = {},
         activateVehicle: suspend (Vehicle) -> Boolean = { true },
     ): HomeViewModel =
         HomeViewModel(
@@ -151,6 +227,8 @@ class HomeViewModelTest {
             syncStatus = syncStatus,
             storageStats = flowOf(StorageStats(usedBytes = 12_582_912L, budgetBytes = 1_073_741_824L)),
             onSyncNow = {},
+            startCollectionSession = startCollectionSession,
+            stopCollectionSession = stopCollectionSession,
             activateVehicle = activateVehicle,
         )
 

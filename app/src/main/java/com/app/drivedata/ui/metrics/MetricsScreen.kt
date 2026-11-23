@@ -20,14 +20,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -82,9 +78,6 @@ fun MetricsScreen(
         state = state,
         selectedTab = selectedTab,
         onTabSelected = { selectedTab = it },
-        onToggleCollection = {
-            if (state.isCollecting) viewModel.stopCollection() else viewModel.startCollection()
-        },
         modifier = modifier,
     )
 }
@@ -94,7 +87,6 @@ private fun MetricsContent(
     state: MetricsUiState,
     selectedTab: ParametersTab,
     onTabSelected: (ParametersTab) -> Unit,
-    onToggleCollection: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -102,7 +94,6 @@ private fun MetricsContent(
             .fillMaxSize()
             .background(HomeBackground),
     ) {
-        val canToggleCollection = state.isEcuVerified && state.canCollect
         ScreenHeader(
             title = stringResource(R.string.metrics_title),
             subtitle =
@@ -111,24 +102,6 @@ private fun MetricsContent(
                 } else {
                     stringResource(R.string.metrics_no_active_vehicle)
                 },
-            actions = {
-                if (canToggleCollection) {
-                    IconButton(onClick = onToggleCollection) {
-                        Icon(
-                            imageVector =
-                                if (state.isCollecting) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                            contentDescription = stringResource(
-                                if (state.isCollecting) {
-                                    R.string.metrics_pause_collection
-                                } else {
-                                    R.string.metrics_resume_collection
-                                },
-                            ),
-                            tint = Color.White,
-                        )
-                    }
-                }
-            },
         )
         ParametersTabs(selected = selectedTab, onSelected = onTabSelected)
         when (selectedTab) {
