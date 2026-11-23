@@ -150,7 +150,7 @@ private fun DriveDataApp() {
     var selectedVehicleId by rememberSaveable { mutableStateOf<String?>(null) }
     var detailsReturnDestination by rememberSaveable { mutableStateOf(AppDestination.VEHICLES) }
     var vehiclesReturnDestination by rememberSaveable { mutableStateOf(AppDestination.HOME) }
-    var connectionReturnDestination by rememberSaveable { mutableStateOf(AppDestination.PROFILE) }
+    var connectionReturnDestination by rememberSaveable { mutableStateOf(AppDestination.VEHICLES) }
     val detailsVehicleId = selectedVehicleId
     val vehicleDetailsViewModel: VehicleDetailsViewModel? =
         if (vehicleRoute == VehicleRoute.DETAILS && detailsVehicleId != null) {
@@ -186,7 +186,7 @@ private fun DriveDataApp() {
             AppBottomBar(
                 selected = when {
                     vehicleRoute != null -> null
-                    destination == AppDestination.CONNECTION -> AppDestination.PROFILE
+                    destination == AppDestination.CONNECTION -> AppDestination.VEHICLES
                     else -> destination
                 },
                 onSelect = { target ->
@@ -194,7 +194,7 @@ private fun DriveDataApp() {
                     selectedVehicleId = null
                     vehicleRoute = null
                     vehiclesReturnDestination = AppDestination.HOME
-                    connectionReturnDestination = AppDestination.PROFILE
+                    connectionReturnDestination = AppDestination.VEHICLES
                     destination = target
                 },
             )
@@ -234,6 +234,10 @@ private fun DriveDataApp() {
                             onOpenVehicle = { vehicleId ->
                                 openDetails(vehicleId, AppDestination.VEHICLES)
                             },
+                            onNewConnection = {
+                                connectionReturnDestination = AppDestination.VEHICLES
+                                destination = AppDestination.CONNECTION
+                            },
                             modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
                         )
 
@@ -271,10 +275,6 @@ private fun DriveDataApp() {
                             onOpenVehicles = {
                                 vehiclesReturnDestination = AppDestination.PROFILE
                                 destination = AppDestination.VEHICLES
-                            },
-                            onOpenConnection = {
-                                connectionReturnDestination = AppDestination.PROFILE
-                                destination = AppDestination.CONNECTION
                             },
                             onSignOut = authSession::signOut,
                             modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),

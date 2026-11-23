@@ -8,10 +8,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -37,10 +39,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -81,6 +86,7 @@ fun LoginScreen(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LoginContent(
     state: LoginUiState,
@@ -91,6 +97,7 @@ private fun LoginContent(
 ) {
     UseDarkSystemBars()
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    val passwordFocusRequester = remember { FocusRequester() }
 
     Box(modifier = modifier.fillMaxSize()) {
         Image(
@@ -119,7 +126,8 @@ private fun LoginContent(
                 .systemBarsPadding()
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 40.dp),
+                .imeNestedScroll()
+                .padding(start = 24.dp, end = 24.dp, top = 40.dp, bottom = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -158,6 +166,8 @@ private fun LoginContent(
                     )
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions =
+                    KeyboardActions(onNext = { passwordFocusRequester.requestFocus() }),
                 label = { Text(stringResource(R.string.login_username_label)) },
                 shape = RoundedCornerShape(12.dp),
                 colors = loginFieldColors(),
@@ -210,7 +220,9 @@ private fun LoginContent(
                 label = { Text(stringResource(R.string.login_password_label)) },
                 shape = RoundedCornerShape(12.dp),
                 colors = loginFieldColors(),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(passwordFocusRequester),
             )
 
             state.error?.let { error ->

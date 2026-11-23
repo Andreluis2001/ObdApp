@@ -1,5 +1,6 @@
 package com.app.drivedata.ui.offline
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -72,9 +73,49 @@ internal fun recordStatusDetail(
 
         UploadStatus.REJECTED ->
             lastError
-                ?.let { stringResource(R.string.offline_record_rejected_reason, it) }
+                ?.let {
+                    stringResource(
+                        R.string.offline_record_rejected_reason,
+                        rejectionReasonText(it),
+                    )
+                }
                 ?: stringResource(R.string.offline_status_rejected)
     }
+
+/**
+ * Rejections are stored as the raw reason returned by the API (or as a local engine message).
+ * Keeping the raw value in the database preserves diagnostics; only presentation is localized.
+ */
+@StringRes
+internal fun rejectionReasonRes(reason: String?): Int? {
+    val normalized = reason?.trim()?.lowercase().orEmpty()
+    return when {
+        normalized == "vehicle_not_authorized" ->
+            R.string.offline_rejection_vehicle_not_authorized
+
+        normalized == "missing vin" -> R.string.offline_rejection_missing_vin
+        normalized == "record rejected by the server" ||
+            normalized.startsWith("request rejected by the server") ->
+            R.string.offline_rejection_generic
+
+        else -> null
+    }
+}
+
+@Composable
+internal fun rejectionReasonText(reason: String?): String {
+    rejectionReasonRes(reason)?.let { return stringResource(it) }
+    val code = reason?.trim().orEmpty()
+    return if (code.isRejectionCode()) {
+        stringResource(R.string.offline_rejection_unknown_code, code)
+    } else {
+        stringResource(R.string.offline_rejection_generic)
+    }
+}
+
+/** Server reasons are snake_case codes; support text written for humans is shown generically. */
+private fun String.isRejectionCode(): Boolean =
+    isNotEmpty() && length <= 64 && all { it.isDigit() || it == '_' || it in 'a'..'z' }
 
 @Composable
 internal fun statusColor(status: UploadStatus): Color =

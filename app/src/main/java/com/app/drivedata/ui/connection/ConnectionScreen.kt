@@ -6,11 +6,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imeNestedScroll
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -18,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -48,9 +52,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -105,6 +111,7 @@ fun ConnectionScreen(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ConnectionContent(
     state: ConnectionUiState,
@@ -118,6 +125,7 @@ private fun ConnectionContent(
     modifier: Modifier = Modifier,
 ) {
     var activeDialog by rememberSaveable { mutableStateOf<ConnectionDialog?>(null) }
+    val focusManager = LocalFocusManager.current
     val protocol = (state.connection as? ObdConnectionState.Connected)?.protocol
     val protocolText =
         when {
@@ -138,7 +146,9 @@ private fun ConnectionContent(
         Column(
             modifier = Modifier
                 .weight(1f)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
+                .imeNestedScroll()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -149,6 +159,7 @@ private fun ConnectionContent(
                 onDiscover = onDiscover,
                 onCancel = onCancel,
                 onDisconnect = onDisconnect,
+                hideKeyboard = focusManager::clearFocus,
             )
 
             when (val discovery = state.discovery) {
@@ -255,6 +266,7 @@ private fun AdapterCard(
     onDiscover: () -> Unit,
     onCancel: () -> Unit,
     onDisconnect: () -> Unit,
+    hideKeyboard: () -> Unit,
 ) {
     val connection = state.connection
     val discovering = state.isDiscovering
@@ -311,6 +323,7 @@ private fun AdapterCard(
                     isError = false,
                     errorText = "",
                     keyboardType = KeyboardType.Uri,
+                    imeAction = ImeAction.Next,
                     enabled = !state.isBusy,
                 )
                 FormTextField(
@@ -321,6 +334,14 @@ private fun AdapterCard(
                     isError = false,
                     errorText = "",
                     keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done,
+                    keyboardActions =
+                        KeyboardActions(
+                            onDone = {
+                                hideKeyboard()
+                                if (state.isConfigValid && !state.isBusy) onDiscover()
+                            },
+                        ),
                     enabled = !state.isBusy,
                 )
             }

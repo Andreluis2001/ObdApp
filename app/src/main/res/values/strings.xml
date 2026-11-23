@@ -73,8 +73,8 @@
     <string name="failure_invalid_configuration">Informe um endereço IP e uma porta válidos.</string>
     <string name="failure_connect_timeout">O adaptador não respondeu a tempo. Verifique se está ligado e na rede Wi-Fi correta.</string>
     <string name="failure_transport">Não foi possível alcançar o adaptador. Verifique se o celular está na rede Wi-Fi do adaptador.</string>
-    <string name="failure_missing_prompt">O adaptador não enviou o prompt esperado (&gt;). Ele pode não ser um dispositivo ELM327.</string>
-    <string name="failure_adapter_initialization">O adaptador não aceitou os comandos de inicialização. Ele pode não ser um dispositivo compatível com ELM327.</string>
+    <string name="failure_missing_prompt">O adaptador não enviou o prompt esperado (&gt;).</string>
+    <string name="failure_adapter_initialization">O adaptador não aceitou os comandos de inicialização. Ele pode não ser um dispositivo compatível com o adaptador.</string>
     <string name="failure_unknown">Ocorreu um erro inesperado ao conectar.</string>
 
     <string name="tab_home">Início</string>
@@ -82,9 +82,9 @@
     <string name="tab_connection">Conexão</string>
     <string name="tab_metrics">Leituras</string>
     <string name="tab_profile">Perfil</string>
-    <string name="tab_offline">Offline</string>
+    <string name="tab_offline">Dados</string>
 
-    <string name="offline_title">Dados offline</string>
+    <string name="offline_title">Dados armazenados</string>
     <string name="offline_subtitle">Armazenamento local</string>
     <string name="offline_no_pending">Nenhum registro pendente</string>
     <plurals name="offline_pending_count">
@@ -92,7 +92,7 @@
         <item quantity="other">%1$d registros pendentes</item>
     </plurals>
     <string name="offline_pending_size">~ %1$s</string>
-    <string name="offline_pending_hint">O envio será realizado quando houver conexão com a internet.</string>
+    <string name="offline_pending_hint">O envio será realizado quando houver conexão com o servidor.</string>
     <string name="offline_sync_title">Sincronização</string>
     <string name="offline_sync_in_progress">Enviando dados\u2026</string>
     <string name="offline_sync_waiting">Aguardando conexão com a internet.</string>
@@ -126,6 +126,10 @@
     <string name="offline_record_uploaded_at">Sincronizado em %1$s</string>
     <string name="offline_record_waiting">Aguardando sincronização</string>
     <string name="offline_record_rejected_reason">Motivo: %1$s</string>
+    <string name="offline_rejection_vehicle_not_authorized">Veículo não autorizado</string>
+    <string name="offline_rejection_missing_vin">VIN do veículo não informado</string>
+    <string name="offline_rejection_generic">Registro recusado pelo servidor</string>
+    <string name="offline_rejection_unknown_code">Registro recusado pelo servidor (código: %1$s)</string>
     <string name="offline_record_view_details">Ver parâmetros</string>
     <string name="offline_details_title">Detalhes da coleta</string>
     <string name="offline_details_subtitle">Parâmetros registrados</string>
@@ -142,11 +146,6 @@
     <string name="profile_collection_interval_value">A cada %1$d s</string>
     <string name="profile_collection_interval_min">Mín. %1$d s</string>
     <string name="profile_collection_interval_max">Máx. %1$d s</string>
-    <string name="profile_connection">Conexão</string>
-    <string name="profile_connection_online">ELM327 conectado · Internet disponível</string>
-    <string name="profile_connection_adapter_only">ELM327 conectado · Internet indisponível</string>
-    <string name="profile_connection_internet_only">ELM327 desconectado · Internet disponível</string>
-    <string name="profile_connection_offline">ELM327 desconectado · Internet indisponível</string>
     <string name="profile_about">Sobre o aplicativo</string>
     <string name="profile_version">Versão %1$s</string>
     <plurals name="profile_vehicle_count">
@@ -203,7 +202,7 @@
 
     <string name="metrics_title">Parâmetros do Veículo</string>
     <string name="metrics_tab_realtime">Tempo real</string>
-    <string name="metrics_tab_diagnostics">Diagnóstico</string>
+    <string name="metrics_tab_diagnostics">Detalhes</string>
     <string name="metrics_pause_collection">Parar coleta</string>
     <string name="metrics_resume_collection">Iniciar coleta</string>
     <string name="metrics_min_max">min %1$s \u2022 máx %2$s</string>
@@ -253,8 +252,9 @@
 
     <string name="vehicles_title">Meus veículos</string>
     <string name="vehicles_subtitle">Escolha o veículo ativo e gerencie os adaptadores</string>
+    <string name="vehicles_new_connection">Nova conexão</string>
     <string name="vehicles_empty_title">Nenhum veículo cadastrado</string>
-    <string name="vehicles_empty_message">Descubra seu primeiro veículo na aba Conexão: informe o endereço do adaptador e toque em Descobrir veículo.</string>
+    <string name="vehicles_empty_message">Toque em Nova conexão, informe o endereço do adaptador e descubra seu primeiro veículo.</string>
     <string name="vehicle_active_badge">Ativo</string>
     <string name="vehicle_select_active">Definir como ativo</string>
     <string name="vehicle_remove">Remover</string>
@@ -300,7 +300,7 @@
     <string name="pid_value">PID 0x%1$02X</string>
 
     <string name="discovery_stage_connect">Conexão com o adaptador</string>
-    <string name="discovery_stage_initialize">Inicialização do adaptador</string>
+    <string name="discovery_stage_initialize">Inicializando</string>
     <string name="discovery_stage_ecu">Comunicação com a ECU</string>
     <string name="discovery_stage_identity">Identificação do veículo</string>
     <string name="discovery_stage_discovery">Descoberta de parâmetros</string>
