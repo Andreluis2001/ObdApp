@@ -1,8 +1,5 @@
 package com.app.drivedata.ui.profile
 
-import com.app.drivedata.obd.model.EcuStatus
-import com.app.drivedata.obd.model.ObdConnectionState
-import com.app.drivedata.obd.model.ObdWifiConfig
 import com.app.drivedata.vehicle.model.Elm327Connection
 import com.app.drivedata.vehicle.model.Vehicle
 import com.app.drivedata.vehicle.model.VehicleCapabilities
@@ -21,9 +18,7 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -78,33 +73,6 @@ class ProfileViewModelTest {
         }
 
     @Test
-    fun exposesAdapterAndInternetStatus() =
-        runTest {
-            val viewModel =
-                profileViewModel(
-                    username = MutableStateFlow("user"),
-                    connection = MutableStateFlow(connected()),
-                    internetAvailable = flowOf(true),
-                )
-
-            val state = viewModel.awaitState { it.username == "user" }
-
-            assertTrue(state.adapterConnected)
-            assertTrue(state.internetAvailable)
-        }
-
-    @Test
-    fun reportsOfflineWhenThereIsNoAdapterOrInternet() =
-        runTest {
-            val viewModel = profileViewModel(username = MutableStateFlow("user"))
-
-            val state = viewModel.awaitState { it.username == "user" }
-
-            assertFalse(state.adapterConnected)
-            assertFalse(state.internetAvailable)
-        }
-
-    @Test
     fun exposesConfiguredCollectionInterval() =
         runTest {
             val viewModel = profileViewModel(collectionInterval = flowOf(60L))
@@ -148,30 +116,18 @@ class ProfileViewModelTest {
     private fun profileViewModel(
         username: MutableStateFlow<String?> = MutableStateFlow("andre.vieira@empresa.com"),
         vehicles: Flow<List<Vehicle>> = flowOf(emptyList()),
-        connection: MutableStateFlow<ObdConnectionState> =
-            MutableStateFlow(ObdConnectionState.Disconnected),
-        internetAvailable: Flow<Boolean> = flowOf(false),
         collectionInterval: Flow<Long> = flowOf(1L),
         saveCollectionInterval: suspend (Long) -> Unit = { },
     ): ProfileViewModel =
         ProfileViewModel(
             signedInUser = username,
             vehicles = vehicles,
-            connectionState = connection,
-            internetAvailable = internetAvailable,
             collectionInterval = collectionInterval,
             saveCollectionInterval = saveCollectionInterval,
         )
 
     private suspend fun ProfileViewModel.awaitState(predicate: (ProfileUiState) -> Boolean): ProfileUiState =
         withTimeout(5_000L) { uiState.first(predicate) }
-
-    private fun connected(): ObdConnectionState.Connected =
-        ObdConnectionState.Connected(
-            ObdWifiConfig("192.168.0.10", 35_000),
-            "CAN",
-            EcuStatus.VERIFIED,
-        )
 
     private fun vehicle(id: String): Vehicle =
         Vehicle(

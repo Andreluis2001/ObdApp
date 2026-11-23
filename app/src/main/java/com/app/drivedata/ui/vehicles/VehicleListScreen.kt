@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.drivedata.R
 import com.app.drivedata.ui.common.AppCard
 import com.app.drivedata.ui.common.LightStatusBarIcons
+import com.app.drivedata.ui.common.PrimaryButton
 import com.app.drivedata.ui.common.ScreenHeader
 import com.app.drivedata.ui.preview.previewVehicleListState
 import com.app.drivedata.ui.theme.Dimens
@@ -50,6 +52,7 @@ fun VehicleListScreen(
     viewModel: VehicleListViewModel,
     onBack: () -> Unit,
     onOpenVehicle: (String) -> Unit,
+    onNewConnection: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -60,6 +63,7 @@ fun VehicleListScreen(
     VehicleListContent(
         state = state,
         onOpenVehicle = onOpenVehicle,
+        onNewConnection = onNewConnection,
         onDismissError = viewModel::dismissError,
         modifier = modifier,
     )
@@ -69,6 +73,7 @@ fun VehicleListScreen(
 private fun VehicleListContent(
     state: VehicleListUiState,
     onOpenVehicle: (String) -> Unit,
+    onNewConnection: () -> Unit,
     onDismissError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -81,6 +86,18 @@ private fun VehicleListContent(
             title = stringResource(R.string.vehicles_title),
             subtitle = stringResource(R.string.vehicles_subtitle),
         )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Dimens.ScreenPadding, vertical = Dimens.CardSpacing),
+        ) {
+            PrimaryButton(
+                label = stringResource(R.string.vehicles_new_connection),
+                onClick = onNewConnection,
+                icon = Icons.Filled.Wifi,
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -183,6 +200,7 @@ private fun VehicleListPreview() {
         VehicleListContent(
             state = previewVehicleListState(),
             onOpenVehicle = {},
+            onNewConnection = {},
             onDismissError = {},
         )
     }
@@ -201,6 +219,7 @@ private fun VehiclesEmptyPreview() {
         VehicleListContent(
             state = previewVehicleListState(vehicles = emptyList()),
             onOpenVehicle = {},
+            onNewConnection = {},
             onDismissError = {},
         )
     }
@@ -219,6 +238,7 @@ private fun VehiclesLoadingPreview() {
         VehicleListContent(
             state = previewVehicleListState(isLoading = true, error = VehicleListError.ACTIVATE_FAILED),
             onOpenVehicle = {},
+            onNewConnection = {},
             onDismissError = {},
         )
     }
@@ -238,6 +258,7 @@ private fun VehiclesLargeTextPreview() {
         VehicleListContent(
             state = previewVehicleListState(),
             onOpenVehicle = {},
+            onNewConnection = {},
             onDismissError = {},
         )
     }

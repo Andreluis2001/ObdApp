@@ -199,6 +199,8 @@ fun PrimaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    icon: ImageVector? = null,
+    iconContentDescription: String? = null,
 ) {
     Button(
         onClick = onClick,
@@ -215,6 +217,14 @@ fun PrimaryButton(
                 disabledContentColor = Color.White.copy(alpha = 0.75f),
             ),
     ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = iconContentDescription,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+        }
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,

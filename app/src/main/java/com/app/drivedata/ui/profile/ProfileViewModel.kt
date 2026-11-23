@@ -7,7 +7,6 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.app.drivedata.DriveDataApplication
 import com.app.drivedata.metrics.CollectionInterval
-import com.app.drivedata.obd.model.ObdConnectionState
 import com.app.drivedata.vehicle.model.Vehicle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,20 +21,16 @@ data class ProfileUiState(
     val displayName: String = "",
     val email: String? = null,
     val vehicleCount: Int = 0,
-    val adapterConnected: Boolean = false,
-    val internetAvailable: Boolean = false,
     val collectionIntervalSeconds: Long = CollectionInterval.DEFAULT_SECONDS,
 )
 
 /**
- * Supplies the profile tab with the signed-in identity, garage size, live adapter/internet status
- * and the persisted collection interval.
+ * Supplies the profile tab with the signed-in identity, garage size and the persisted
+ * collection interval.
  */
 class ProfileViewModel(
     signedInUser: StateFlow<String?>,
     vehicles: Flow<List<Vehicle>>,
-    connectionState: StateFlow<ObdConnectionState>,
-    internetAvailable: Flow<Boolean>,
     collectionInterval: Flow<Long>,
     private val saveCollectionInterval: suspend (Long) -> Unit,
 ) : ViewModel() {
@@ -50,23 +45,13 @@ class ProfileViewModel(
             )
         }
 
-    private val connectivity: Flow<ProfileConnectivity> =
-        combine(connectionState, internetAvailable) { connection, internet ->
-            ProfileConnectivity(
-                adapterConnected = connection is ObdConnectionState.Connected,
-                internetAvailable = internet,
-            )
-        }
-
     val uiState: StateFlow<ProfileUiState> =
-        combine(identity, vehicles, connectivity, collectionInterval) { id, allVehicles, connectionInfo, intervalSeconds ->
+        combine(identity, vehicles, collectionInterval) { id, allVehicles, intervalSeconds ->
             ProfileUiState(
                 username = id.username,
                 displayName = id.displayName,
                 email = id.email,
                 vehicleCount = allVehicles.size,
-                adapterConnected = connectionInfo.adapterConnected,
-                internetAvailable = connectionInfo.internetAvailable,
                 collectionIntervalSeconds = intervalSeconds,
             )
         }.stateIn(
@@ -90,11 +75,6 @@ class ProfileViewModel(
         val email: String?,
     )
 
-    private data class ProfileConnectivity(
-        val adapterConnected: Boolean,
-        val internetAvailable: Boolean,
-    )
-
     companion object {
         private const val STOP_TIMEOUT_MS = 5_000L
 
@@ -105,8 +85,6 @@ class ProfileViewModel(
                     ProfileViewModel(
                         signedInUser = container.authSession.signedInUser,
                         vehicles = container.vehicleRepository.observeVehicles(),
-                        connectionState = container.obdConnectionManager.state,
-                        internetAvailable = container.connectivityObserver.isAvailable,
                         collectionInterval = container.collectionIntervalSeconds,
                         saveCollectionInterval = container.settingsRepository::saveCollectionIntervalSeconds,
                     )

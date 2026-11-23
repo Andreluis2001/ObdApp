@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -69,7 +68,6 @@ private enum class ProfileDialog { COLLECTION, ABOUT }
 fun ProfileScreen(
     viewModel: ProfileViewModel,
     onOpenVehicles: () -> Unit,
-    onOpenConnection: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -78,7 +76,6 @@ fun ProfileScreen(
     ProfileContent(
         state = state,
         onOpenVehicles = onOpenVehicles,
-        onOpenConnection = onOpenConnection,
         onCollectionIntervalSelected = viewModel::setCollectionIntervalSeconds,
         onSignOut = onSignOut,
         modifier = modifier,
@@ -89,7 +86,6 @@ fun ProfileScreen(
 private fun ProfileContent(
     state: ProfileUiState,
     onOpenVehicles: () -> Unit,
-    onOpenConnection: () -> Unit,
     onCollectionIntervalSelected: (Long) -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
@@ -130,12 +126,6 @@ private fun ProfileContent(
                     state.collectionIntervalSeconds,
                 ),
                 onClick = { activeDialog = ProfileDialog.COLLECTION },
-            )
-            ProfileMenuRow(
-                icon = Icons.Outlined.Wifi,
-                title = stringResource(R.string.profile_connection),
-                subtitle = connectionSubtitle(state),
-                onClick = onOpenConnection,
             )
             ProfileMenuRow(
                 icon = Icons.Outlined.Info,
@@ -276,17 +266,6 @@ private fun ProfileMenuRow(
         }
     }
 }
-
-@Composable
-private fun connectionSubtitle(state: ProfileUiState): String =
-    stringResource(
-        when {
-            state.adapterConnected && state.internetAvailable -> R.string.profile_connection_online
-            state.adapterConnected -> R.string.profile_connection_adapter_only
-            state.internetAvailable -> R.string.profile_connection_internet_only
-            else -> R.string.profile_connection_offline
-        },
-    )
 
 @Composable
 private fun CollectionDialog(

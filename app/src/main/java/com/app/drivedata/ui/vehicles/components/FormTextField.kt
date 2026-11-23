@@ -2,6 +2,7 @@ package com.app.drivedata.ui.vehicles.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -12,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -37,6 +39,8 @@ fun FormTextField(
     modifier: Modifier = Modifier,
     keyboardType: KeyboardType = KeyboardType.Text,
     capitalization: KeyboardCapitalization = KeyboardCapitalization.Unspecified,
+    imeAction: ImeAction = ImeAction.Next,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
     enabled: Boolean = true,
 ) {
     OutlinedTextField(
@@ -68,7 +72,9 @@ fun FormTextField(
             KeyboardOptions(
                 keyboardType = keyboardType,
                 capitalization = capitalization,
+                imeAction = imeAction,
             ),
+        keyboardActions = keyboardActions,
         shape = FieldShape,
         colors =
             OutlinedTextFieldDefaults.colors(
