@@ -122,7 +122,8 @@ class MetricsCollectionController(
         }
 
         if (!isCollectible(connection, vehicle)) {
-            if (!maintenancePaused) stoppedByUser = false
+            // A user pause is sticky: losing the link or the vehicle must not silently restart
+            // collection. Only an explicit startCollection() clears stoppedByUser.
             stopInternal()
             runningConfig = null
             clearSnapshot()

@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.app.drivedata.DriveDataApplication
+import com.app.drivedata.logging.AppLog
 import com.app.drivedata.metrics.ActiveVehicleCollection
+import com.app.drivedata.metrics.CollectionStartResult
 import com.app.drivedata.metrics.MetricsCollectionState
 import com.app.drivedata.metrics.MetricsRepository
 import com.app.drivedata.metrics.model.MetricId
@@ -17,8 +19,11 @@ import com.app.drivedata.storage.StorageStats
 import com.app.drivedata.sync.SyncError
 import com.app.drivedata.sync.SyncStatus
 import com.app.drivedata.vehicle.model.Vehicle
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -44,13 +49,29 @@ data class HomeUiState(
     val syncError: SyncError? = null,
     val storageUsedBytes: Long = 0L,
     val storageBudgetBytes: Long = 0L,
+    val canCollect: Boolean = false,
+    val hasAdapterConfig: Boolean = false,
+    val isStartingCollection: Boolean = false,
+    val collectionStartFailure: CollectionStartResult? = null,
 ) {
     val pendingBytes: Long
         get() = pendingCount * MetricsRepository.ESTIMATED_RECORD_BYTES
 
     val canSyncNow: Boolean
         get() = internetAvailable && !isSyncing && pendingCount > 0
+
+    val canStartCollection: Boolean
+        get() = canCollect && hasAdapterConfig && !isStartingCollection
+
+    val isAdapterBusy: Boolean
+        get() = connection is ObdConnectionState.Connecting ||
+            connection is ObdConnectionState.Initializing
 }
+
+private data class CollectionActionState(
+    val isStarting: Boolean = false,
+    val failure: CollectionStartResult? = null,
+)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
@@ -66,8 +87,15 @@ class HomeViewModel(
     syncStatus: StateFlow<SyncStatus>,
     storageStats: Flow<StorageStats>,
     private val onSyncNow: () -> Unit,
+    private val startCollectionSession: suspend () -> CollectionStartResult = {
+        CollectionStartResult.NO_ACTIVE_VEHICLE
+    },
+    private val stopCollectionSession: () -> Unit = {},
     private val activateVehicle: suspend (Vehicle) -> Boolean = { true },
 ) : ViewModel() {
+
+    private val collectionAction = MutableStateFlow(CollectionActionState())
+    private var collectionStartJob: Job? = null
 
     private val coreState: Flow<CoreState> =
         combine(
@@ -108,6 +136,8 @@ class HomeViewModel(
                 internetAvailable = internet,
                 isSyncing = sync.isSyncing,
                 syncError = sync.lastError,
+                canCollect = vehicle?.canCollect == true,
+                hasAdapterConfig = vehicle?.adapterConfig != null,
             )
         }.combine(storageStats) { state, storage ->
             state.copy(
@@ -116,6 +146,11 @@ class HomeViewModel(
             )
         }.combine(readingHistory) { state, history ->
             state.copy(history = history)
+        }.combine(collectionAction) { state, action ->
+            state.copy(
+                isStartingCollection = action.isStarting,
+                collectionStartFailure = if (state.isCollecting) null else action.failure,
+            )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
@@ -124,6 +159,46 @@ class HomeViewModel(
 
     fun syncNow() {
         onSyncNow()
+    }
+
+    /** Explicit continue action: reuses the live link, reconnecting with saved IP/port if needed. */
+    fun startCollection() {
+        val current = uiState.value
+        if (collectionAction.value.isStarting ||
+            current.isCollecting ||
+            !current.canStartCollection ||
+            current.isAdapterBusy
+        ) {
+            return
+        }
+
+        collectionStartJob?.cancel()
+        collectionStartJob =
+            viewModelScope.launch {
+                collectionAction.value = CollectionActionState(isStarting = true)
+                val result =
+                    try {
+                        startCollectionSession()
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        AppLog.w("Collection could not be started from the dashboard", error)
+                        CollectionStartResult.CONNECTION_FAILED
+                    }
+                collectionAction.value =
+                    CollectionActionState(
+                        isStarting = false,
+                        failure = result.takeIf { it.isFailure && it != CollectionStartResult.ADAPTER_BUSY },
+                    )
+            }
+    }
+
+    /** Explicit pause action: stops polling and cancels a reconnect that is still in progress. */
+    fun stopCollection() {
+        collectionStartJob?.cancel()
+        collectionStartJob = null
+        collectionAction.value = CollectionActionState()
+        stopCollectionSession()
     }
 
     fun selectVehicle(vehicleId: String) {
@@ -170,6 +245,8 @@ class HomeViewModel(
                         syncStatus = container.telemetrySyncEngine.status,
                         storageStats = container.storageStatsProvider.observe(),
                         onSyncNow = container.syncScheduler::syncNow,
+                        startCollectionSession = container.metricsCollectionStarter::start,
+                        stopCollectionSession = container.metricsCollectionStarter::stop,
                         activateVehicle = { vehicle ->
                             container.activeVehicleSwitcher.switchTo(vehicle)
                         },

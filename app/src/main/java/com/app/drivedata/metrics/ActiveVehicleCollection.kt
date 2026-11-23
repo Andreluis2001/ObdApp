@@ -23,6 +23,10 @@ data class ActiveVehicleCollection(
     val canCollect: Boolean
         get() = hasDiscovery && catalog.isNotEmpty()
 
+    /** Saved adapter address, reused when collection must reconnect after a pause. */
+    val adapterConfig: ObdWifiConfig?
+        get() = if (host.isNotBlank() && port in 1..65535) ObdWifiConfig(host, port) else null
+
     fun matches(config: ObdWifiConfig): Boolean =
         host == config.host.trim() && port == config.port
 }

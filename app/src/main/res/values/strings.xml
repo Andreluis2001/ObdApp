@@ -166,6 +166,12 @@
     <string name="home_disconnected">Veículo desconectado</string>
     <string name="home_collecting">Coleta ativa</string>
     <string name="home_idle">Coleta parada</string>
+    <string name="home_pause_collection">Parar coleta</string>
+    <string name="home_continue_collection">Continuar coleta</string>
+    <string name="home_collection_starting">Retomando coleta\u2026</string>
+    <string name="home_collection_no_adapter">Este veículo não tem um adaptador configurado.</string>
+    <string name="home_collection_connection_failed">Não foi possível conectar ao adaptador. Verifique o IP e a porta.</string>
+    <string name="home_collection_ecu_unavailable">O veículo não respondeu. Verifique a conexão com a ECU.</string>
     <string name="home_main_parameters">Principais parâmetros (OBD-II)</string>
     <string name="home_see_all_parameters">Ver todos os parâmetros</string>
     <string name="home_connection_status">Status da conexão</string>
@@ -203,8 +209,6 @@
     <string name="metrics_title">Parâmetros do Veículo</string>
     <string name="metrics_tab_realtime">Tempo real</string>
     <string name="metrics_tab_diagnostics">Detalhes</string>
-    <string name="metrics_pause_collection">Parar coleta</string>
-    <string name="metrics_resume_collection">Iniciar coleta</string>
     <string name="metrics_min_max">min %1$s \u2022 máx %2$s</string>
     <string name="metrics_offline_hint">Conecte o ELM327 para receber os parâmetros do veículo.</string>
     <string name="metrics_no_active_vehicle">Nenhum veículo ativo</string>

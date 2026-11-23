@@ -130,6 +130,8 @@ internal fun previewHomeState(
         syncError = syncError,
         storageUsedBytes = 12L * 1024 * 1024,
         storageBudgetBytes = 1024L * 1024 * 1024,
+        canCollect = true,
+        hasAdapterConfig = true,
     )
 }
 

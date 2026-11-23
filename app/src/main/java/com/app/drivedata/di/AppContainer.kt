@@ -8,6 +8,7 @@ import com.app.drivedata.connectivity.ConnectivityObserver
 import com.app.drivedata.metrics.ActiveVehicleCollection
 import com.app.drivedata.metrics.CollectionInterval
 import com.app.drivedata.metrics.MetricsCollectionController
+import com.app.drivedata.metrics.MetricsCollectionStarter
 import com.app.drivedata.metrics.MetricsRepository
 import com.app.drivedata.metrics.ObdMetricsCollector
 import com.app.drivedata.metrics.toActiveVehicleCollection
@@ -98,6 +99,15 @@ class AppContainer(context: Context) {
             signedInUser = authSession.signedInUser,
             disconnect = obdConnectionManager::disconnect,
             onSnapshotPersisted = syncScheduler::requestSync,
+        )
+
+    /** Explicit UI start/resume, reconnecting with the saved adapter address only when needed. */
+    val metricsCollectionStarter =
+        MetricsCollectionStarter(
+            activeVehicle = activeVehicleCollection,
+            connectionState = obdConnectionManager.state,
+            connect = obdConnectionManager::connect,
+            controller = metricsCollectionController,
         )
 
     init {
